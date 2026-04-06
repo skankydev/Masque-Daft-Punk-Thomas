@@ -9,13 +9,12 @@
 #include <SPI.h>
 #include "function.h"
 
-#define VERSION 0.03
-#define NUM_LEDS 80
+#define MATRIX_W  10
+#define MATRIX_H   7
+#define NUM_LEDS  (MATRIX_W * MATRIX_H)
 
-#define PIN_LEDS_0 13
-#define PIN_LEDS_1 15
-#define PIN_LEDS_2 16
+#define PIN_LEDS  13
 
-#define RECO_TIMER 300000
+#define EFFECT_COUNT 5
 
 #endif

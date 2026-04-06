@@ -1,52 +1,51 @@
 #pragma once
 
 #include "setting.h"
-#include "LedConfig.h"
-#include <map>
-#include <ArduinoJson.h>
-
-enum AppMode {
-	MODE_SCENARIO,
-	MODE_LIVE
-};
+#include <FastLED.h>
+#include "effects/Effect.h"
 
 class LedManager {
-	private:
-		static LedManager* instance;
-		LedManager();
 
-		std::map<String, LedConfig*> _lines;
+    private:
+        static LedManager* instance;
+        LedManager();
 
-		JsonDocument _scenario;
-		bool _scenarioMode = false;
+        CRGB    _leds[NUM_LEDS];
+        Effect* _current;
+        uint8_t _effectIndex;
 
-		AppMode _appMode = MODE_SCENARIO;
+        uint8_t       _brightness;
+        uint32_t      _speed;
+        unsigned long _lastFrame;
 
-		unsigned long _lastChange;
-		uint32_t _autoDelay;
+        bool          _autoMode;
+        unsigned long _lastChange;
+        uint32_t      _autoDelay;
 
-	public:
-		static LedManager* getInstance();
+        void _setEffectByIndex(uint8_t index);
 
-		void step();
-		//void print();
-		void printMode();
+    public:
+        static LedManager* getInstance();
 
-		bool initScenario();
-		void newScenario(JsonObject scenario);
+        void step();
+        void print();
+        void setDefault();
 
-		void setAppMode(AppMode mode);
-		AppMode getAppMode();
+        void    setBrightness(uint8_t brightness);
+        uint8_t getBrightness();
 
-		void setDefault();
-		void setNextEffect(String target = "all");
-		void setEffect(uint8_t mode, String target = "all");
+        void     setSpeed(uint32_t ms);
+        uint32_t getSpeed();
 
-		void setColor(uint32_t color, String target = "all");
-		void setSpeed(uint16_t speed, String target = "all");
-		void setBrightness(uint8_t brightness, String target = "all");
-		uint8_t getBrightness(String target = "all");
+        void    setNextEffect();
+        void    setEffect(uint8_t index);
+        uint8_t getEffectIndex();
+        String  getEffectName();
 
-		void setSegments(JsonArray segments, String target = "all");
+        uint8_t effectCount();
+        String  effectName(uint8_t index);
 
+        void toggleAutoMode();
+        bool getAutoMode();
+        void setAutoDelay(uint32_t delayMs);
 };

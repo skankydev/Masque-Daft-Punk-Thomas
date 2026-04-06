@@ -13,13 +13,7 @@ MainApp::MainApp() {
  */
 void MainApp::init(){
 	Serial.begin(115200);
-	success("LED ARGB - WS2812FX");
-
-	if(!LittleFS.begin(true)){
-		Serial.println("LittleFS Mount Failed");
-		return;
-	}
-
+	success("LED ARGB - Matrix 10x7");
 
 	int reason = esp_reset_reason();
 	String message = getResetReason(reason);
@@ -28,19 +22,8 @@ void MainApp::init(){
 	_leds = LedManager::getInstance();
 	_terminal = Terminal::getInstance();
 
-	_wifi = WiFiTool::getInstance();
-	//_wifi->connect();
-
-	_mqtt = MyMqtt::getInstance();
-	_mqtt->init();
-	_mqtt->connect();
-
 	error("Init ready");
-
-	_cmd = CmdManager::getInstance();
-	if(_mqtt->connected()){
-		_cmd->sayHello();
-	}
+	//_leds->custome();
 }
 
 /**
@@ -50,5 +33,4 @@ void MainApp::init(){
 void MainApp::step(){
 	_leds->step();
 	_terminal->step();
-	_mqtt->step();
 }

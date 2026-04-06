@@ -1,230 +1,162 @@
 #include "LedManager.h"
-#include "DataSaver.h"
+#include "effects/EffetRainbow.h"
+#include "effects/EffetFire.h"
+#include "effects/EffetColorWave.h"
+#include "effects/EffetScanner.h"
+#include "effects/EffetRain.h"
+
+// ─── Registre des effets ─────────────────────────────────────────────────────
+// Pour ajouter un effet : une ligne ici, rien d'autre à toucher.
+
+struct EffetEntry {
+    const char*   nom;
+    Effect*       (*create)();
+};
+
+static const EffetEntry EFFETS[] = {
+    { "Rainbow",    []() -> Effect* { return new EffetRainbow();   } },
+    { "Fire",       []() -> Effect* { return new EffetFire();      } },
+    { "Color Wave", []() -> Effect* { return new EffetColorWave(); } },
+    { "Scanner",    []() -> Effect* { return new EffetScanner();   } },
+    { "Rain",       []() -> Effect* { return new EffetRain();      } },
+};
+
+static const uint8_t NB_EFFETS = sizeof(EFFETS) / sizeof(EFFETS[0]);
+
+// ─── Singleton ───────────────────────────────────────────────────────────────
 
 LedManager* LedManager::instance = nullptr;
 
 LedManager* LedManager::getInstance() {
-	if (!instance) {
-		instance = new LedManager;
-	}
-	return instance;
+    if (!instance) {
+        instance = new LedManager;
+    }
+    return instance;
 }
 
-LedManager::LedManager() : _scenario() {
-	// Créer les 3 lignes
-	_lines["0"] = new LedConfig(PIN_LEDS_0, NUM_LEDS);
-	_lines["1"] = new LedConfig(PIN_LEDS_1, NUM_LEDS);
-	_lines["2"] = new LedConfig(PIN_LEDS_2, NUM_LEDS);
-	
-	// Init toutes les lignes
-	for(auto& [name, config] : _lines) {
-		config->init();
-	}
-	
-	_lastChange = 0;
-	_autoDelay = 5000;
-	
-	_scenarioMode = this->initScenario();
+LedManager::LedManager() : _current(nullptr) {
+    FastLED.addLeds<WS2812B, PIN_LEDS, GRB>(_leds, NUM_LEDS);
+    setDefault();
 }
 
-bool LedManager::initScenario() {
-	String content = DataSaver::read("scenario.json");
-	DeserializationError err = deserializeJson(_scenario, content);
-	if (err) {
-		warning("Scenario deserialize failed ");
-		error(err.c_str());
-		return false;
-	}
-	success("Scenario Ok");
-	return true;
-}
-
-void LedManager::newScenario(JsonObject scenario) {
-	String content;
-	serializeJson(scenario, content);
-	DataSaver::save("scenario.json", content);
-	_scenarioMode = this->initScenario();
-}
-
-void LedManager::step() {
-	// Service de toutes les lignes
-	for(auto& [name, config] : _lines) {
-		config->service();
-	}
-
-	// En mode live on laisse les commandes directes agir, pas de scénario
-	if(_appMode == MODE_LIVE) return;
-
-	if(_scenarioMode) {
-		unsigned long now = millis();
-
-		// Gérer chaque ligne indépendamment
-		for(auto& [name, config] : _lines) {
-			String lineName = "line_" + name;
-
-			if(config->needsUpdate(now)) {
-				// Vérifier si la step existe
-				if(!_scenario[lineName]["steps"][config->getKey()].is<JsonVariant>()) {
-					config->resetKey();
-				}
-
-				// Charger et appliquer la step
-				JsonObject step = _scenario[lineName]["steps"][config->getKey()];
-				config->applyStep(step);
-				config->updateLastChange(now);
-			}
-		}
-	}
-}
-
-void LedManager::setAppMode(AppMode mode) {
-	if(mode == _appMode) return;
-
-	if(mode == MODE_SCENARIO) {
-		// Reprise depuis le début
-		for(auto& [name, config] : _lines) {
-			config->resetKey();
-		}
-		println(vert("Mode SCENARIO"),"LED");
-	} else {
-		println(jaune("Mode LIVE"),"LED");
-	}
-
-	_appMode = mode;
-}
-
-AppMode LedManager::getAppMode() {
-	return _appMode;
-}
-
-/*void LedManager::print() {
-	// Afficher les infos de toutes les lignes
-	for(auto& [name, config] : _lines) {
-		Serial.println(violet("╭───────────────────────"));
-		Serial.println(violet("│ Ligne ") + jaune(name));
-		Serial.print(violet("│ Mode")+"       : ");
-		Serial.println(jaune(config->getModeName(config->getMode())));
-
-		// Affiche la couleur en hexa
-		uint32_t color = config->getColor();
-		Serial.print(violet("│ Couleur")+"    : ");
-		uint8_t r = (color >> 16) & 0xFF;
-		uint8_t g = (color >> 8)  & 0xFF;
-		uint8_t b = color & 0xFF;
-		char colorStr[7];
-		snprintf(colorStr, sizeof(colorStr), "%02X%02X%02X", r, g, b);
-		Serial.println(jaune("0x"+String(colorStr)));
-
-		// Affiche la vitesse
-		Serial.print(violet("│ Vitesse")+"    : ");
-		Serial.println(jaune(String(config->getSpeed())));
-
-		// Affiche la luminosité
-		Serial.print(violet("│ Luminosité")+" : ");
-		Serial.println(jaune(String(config->getBrightness())));
-		Serial.println(violet("╰───────────────────────"));
-		Serial.println();
-	}
-}
-*/
-void LedManager::printMode() {
-	Serial.println(bleu("╭────────── ")+ "Mode" +bleu(" ─────────────"));
-	
-	// On prend juste la première ligne pour afficher les modes disponibles
-	LedConfig* config = _lines["0"];
-	for (int i = 0; i < 80; ++i) {
-		Serial.println(bleu("│ ")+rouge(String(i))+ " => " + config->getModeName(i));
-	}
-	Serial.println(bleu("╰──────────────────────────"));
-}
+// ─── Defaults ────────────────────────────────────────────────────────────────
 
 void LedManager::setDefault() {
-	for(auto& [name, config] : _lines) {
-		config->setDefault();
-	}
+    _brightness = 30;
+    _speed      = 30;
+    _lastFrame  = 0;
+    _autoMode   = false;
+    _lastChange = 0;
+    _autoDelay  = 5000;
+
+    FastLED.setBrightness(_brightness);
+    _setEffectByIndex(0);
 }
 
-void LedManager::setNextEffect(String target) {
-	if(target == "all") {
-		for(auto& [name, config] : _lines) {
-			uint32_t mode = config->getMode();
-			mode += 1;
-			if(mode > 71) {
-				mode = 0;
-			}
-			config->setEffect(mode);
-			println(bleu("Mode Ligne "+name) + " : " + rouge(String(mode))+ " -> " + jaune(config->getModeName(mode)),"LED");
-		}
-	} else if(_lines.find(target) != _lines.end()) {
-		uint32_t mode = _lines[target]->getMode();
-		mode += 1;
-		if(mode > 71) {
-			mode = 0;
-		}
-		_lines[target]->setEffect(mode);
-		println(bleu("Mode Ligne "+target) + " : " + rouge(String(mode))+ " -> " + jaune(_lines[target]->getModeName(mode)),"LED");
-	}
+// ─── Gestion effets ──────────────────────────────────────────────────────────
+
+void LedManager::_setEffectByIndex(uint8_t index) {
+    if (index >= NB_EFFETS) index = 0;
+    delete _current;
+    _effectIndex = index;
+    _current = EFFETS[index].create();
 }
 
-void LedManager::setEffect(uint8_t mode, String target) {
-	if(target == "all") {
-		for(auto& [name, config] : _lines) {
-			config->setEffect(mode);
-		}
-		println(bleu("Mode") + " : " + rouge(String(mode))+ " -> " + jaune(_lines["0"]->getModeName(mode)),"LED");
-	} else if(_lines.find(target) != _lines.end()) {
-		_lines[target]->setEffect(mode);
-		println(bleu("Mode Ligne "+target) + " : " + rouge(String(mode))+ " -> " + jaune(_lines[target]->getModeName(mode)),"LED");
-	}
+void LedManager::setEffect(uint8_t index) {
+    _setEffectByIndex(index);
+    Serial.println(bleu("Effet") + " : " + jaune(_current->name()));
 }
 
-void LedManager::setColor(uint32_t color, String target) {
-	if(target == "all") {
-		for(auto& [name, config] : _lines) {
-			config->setColor(color);
-		}
-	} else if(_lines.find(target) != _lines.end()) {
-		_lines[target]->setColor(color);
-	}
+void LedManager::setNextEffect() {
+    setEffect((_effectIndex + 1) % NB_EFFETS);
 }
 
-void LedManager::setSpeed(uint16_t speed, String target) {
-	if(target == "all") {
-		for(auto& [name, config] : _lines) {
-			config->setSpeed(speed);
-		}
-	} else if(_lines.find(target) != _lines.end()) {
-		_lines[target]->setSpeed(speed);
-	}
+uint8_t LedManager::getEffectIndex() {
+    return _effectIndex;
 }
 
-void LedManager::setBrightness(uint8_t brightness, String target) {
-	println(jaune("Brightness")+" : "+String(brightness),"LED");
-	if(target == "all") {
-		for(auto& [name, config] : _lines) {
-			config->setBrightness(brightness);
-		}
-	} else if(_lines.find(target) != _lines.end()) {
-		_lines[target]->setBrightness(brightness);
-	}
+String LedManager::getEffectName() {
+    return _current ? _current->name() : "";
 }
 
-uint8_t LedManager::getBrightness(String target) {
-	if(target == "all") {
-		// Retourne la brightness de la première ligne
-		return _lines["0"]->getBrightness();
-	} else if(_lines.find(target) != _lines.end()) {
-		return _lines[target]->getBrightness();
-	}
-	return 0;
+uint8_t LedManager::effectCount() {
+    return NB_EFFETS;
 }
 
-void LedManager::setSegments(JsonArray segments, String target) {
-	if(target == "all") {
-		for(auto& [name, config] : _lines) {
-			config->setSegments(segments);
-		}
-	} else if(_lines.find(target) != _lines.end()) {
-		_lines[target]->setSegments(segments);
-	}
+String LedManager::effectName(uint8_t index) {
+    if (index >= NB_EFFETS) return "";
+    return EFFETS[index].nom;
+}
+
+// ─── Loop ────────────────────────────────────────────────────────────────────
+
+void LedManager::step() {
+    unsigned long now = millis();
+
+    if (_autoMode && (now - _lastChange > _autoDelay)) {
+        setNextEffect();
+        _lastChange = now;
+    }
+
+    if (now - _lastFrame >= _speed) {
+        _lastFrame = now;
+        _current->step(_leds);
+        FastLED.show();
+    }
+}
+
+// ─── Luminosité ──────────────────────────────────────────────────────────────
+
+void LedManager::setBrightness(uint8_t brightness) {
+    _brightness = brightness;
+    FastLED.setBrightness(brightness);
+    Serial.println(jaune("Brightness") + " : " + String(brightness));
+}
+
+uint8_t LedManager::getBrightness() {
+    return _brightness;
+}
+
+// ─── Vitesse ─────────────────────────────────────────────────────────────────
+
+void LedManager::setSpeed(uint32_t ms) {
+    _speed = ms;
+    Serial.println(jaune("Speed") + " : " + String(ms) + "ms");
+}
+
+uint32_t LedManager::getSpeed() {
+    return _speed;
+}
+
+// ─── Auto mode ───────────────────────────────────────────────────────────────
+
+void LedManager::toggleAutoMode() {
+    _autoMode = !_autoMode;
+    if (_autoMode) {
+        _lastChange = millis();
+        success("Auto mode activé");
+    } else {
+        warning("Auto mode désactivé");
+    }
+}
+
+bool LedManager::getAutoMode() {
+    return _autoMode;
+}
+
+void LedManager::setAutoDelay(uint32_t delayMs) {
+    _autoDelay = delayMs;
+    Serial.println(bleu("Auto delay") + " : " + String(delayMs) + "ms");
+}
+
+// ─── Debug ───────────────────────────────────────────────────────────────────
+
+void LedManager::print() {
+    Serial.println(violet("╭───────────────────────"));
+    Serial.print(violet("│ Effet")      + "       : "); Serial.println(jaune(getEffectName()));
+    Serial.print(violet("│ Brightness") + " : ");       Serial.println(jaune(String(_brightness)));
+    Serial.print(violet("│ Speed")      + "       : "); Serial.println(jaune(String(_speed) + "ms"));
+    Serial.print(violet("│ Auto")       + "       : "); Serial.println(_autoMode ? vert("on") : rouge("off"));
+    Serial.print(violet("│ Auto delay") + " : ");       Serial.println(jaune(String(_autoDelay) + "ms"));
+    Serial.println(violet("╰───────────────────────"));
 }
