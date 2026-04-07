@@ -1,5 +1,6 @@
 #include "ble/MyBle.h"
 #include "Terminal.h"
+#include "LedManager.h"
 
 
 class BleServerCallbacks : public BLEServerCallbacks 
@@ -111,11 +112,36 @@ void MyBle::doAction(){
 
 	String action = _actionList[0];
 	_actionList.erase(_actionList.begin());
-	Serial.println("Action : " + action);
-	if(action == "PRINT"){
+	Serial.println("BLE action : " + action);
+
+	// Découpe commande:valeur
+	int sep       = action.indexOf(':');
+	String cmd    = (sep == -1) ? action : action.substring(0, sep);
+	String param  = (sep == -1) ? ""     : action.substring(sep + 1);
+
+	LedManager* leds = LedManager::getInstance();
+
+	if (cmd == "PRINT") {
 		Terminal::getInstance()->help();
-	}else if(action == "REBOOT"){
+	} else if (cmd == "REBOOT") {
 		ESP.restart();
+	} else if (cmd == "next") {
+		leds->setNextEffect();
+	} else if (cmd == "default") {
+		leds->setDefault();
+	} else if (cmd == "setEffect") {
+		leds->setEffect((uint8_t)param.toInt());
+	} else if (cmd == "setBrightness") {
+		leds->setBrightness((uint8_t)param.toInt());
+	} else if (cmd == "setSpeed") {
+		leds->setSpeed((uint32_t)param.toInt());
+	} else if (cmd == "setText") {
+		leds->setText(param);
+	} else if (cmd == "setColor") {
+		uint32_t hex = strtol(param.c_str(), NULL, 16);
+		leds->setColor(CRGB((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF));
+	} else {
+		warning("BLE commande inconnue : " + cmd);
 	}
 
 }
