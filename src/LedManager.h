@@ -45,6 +45,9 @@ class LedManager {
         uint8_t effectCount();
         String  effectName(uint8_t index);
 
+        void setText(String text);
+        void setColor(CRGB color);
+
         void toggleAutoMode();
         bool getAutoMode();
         void setAutoDelay(uint32_t delayMs);

@@ -28,6 +28,8 @@ void Terminal::setupMap() {
     _commandParam["setBrightness"] = &Terminal::setBrightness;
     _commandParam["setSpeed"]      = &Terminal::setSpeed;
     _commandParam["setAutoDelay"]  = &Terminal::setAutoDelay;
+    _commandParam["setText"]       = &Terminal::setText;
+    _commandParam["setColor"]      = &Terminal::setColor;
 }
 
 void Terminal::step() {
@@ -94,6 +96,8 @@ void Terminal::help() {
     printLigne("setBrightness", "0-255",   "Définit la luminosité",           "vert");
     printLigne("setSpeed",      "ms",      "Délai entre frames (défaut 30)",  "vert");
     printLigne("setAutoDelay",  "ms",      "Délai auto en ms",                "vert");
+    printLigne("setText",       "texte",   "Texte à défiler (effet Text)",    "vert");
+    printLigne("setColor",      "RRGGBB",  "Couleur texte/effet",             "vert");
 
     Serial.println(violet("║"));
     Serial.println(violet("║ ") + "Effets disponibles :");
@@ -155,4 +159,18 @@ void Terminal::setSpeed(String params) {
 
 void Terminal::setAutoDelay(String params) {
     _leds->setAutoDelay((uint32_t)params.toInt());
+}
+
+void Terminal::setText(String params) {
+    _leds->setText(params);
+    Serial.println(vert("Text : ") + params);
+}
+
+void Terminal::setColor(String params) {
+    if (params.length() != 6) {
+        return error("Format invalide. Ex : setColor FF0000");
+    }
+    uint32_t hex = strtol(params.c_str(), NULL, 16);
+    _leds->setColor(CRGB((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF));
+    Serial.println(vert("Color : #") + params);
 }

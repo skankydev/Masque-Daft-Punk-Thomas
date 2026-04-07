@@ -4,6 +4,8 @@
 #include "effects/EffetColorWave.h"
 #include "effects/EffetScanner.h"
 #include "effects/EffetRain.h"
+#include "effects/EffetPacman.h"
+#include "effects/EffetText.h"
 
 // ─── Registre des effets ─────────────────────────────────────────────────────
 // Pour ajouter un effet : une ligne ici, rien d'autre à toucher.
@@ -19,6 +21,8 @@ static const EffetEntry EFFETS[] = {
     { "Color Wave", []() -> Effect* { return new EffetColorWave(); } },
     { "Scanner",    []() -> Effect* { return new EffetScanner();   } },
     { "Rain",       []() -> Effect* { return new EffetRain();      } },
+    { "Pacman",     []() -> Effect* { return new EffetPacman();   } },
+    { "Text",       []() -> Effect* { return new EffetText();     } },
 };
 
 static const uint8_t NB_EFFETS = sizeof(EFFETS) / sizeof(EFFETS[0]);
@@ -103,6 +107,16 @@ void LedManager::step() {
         _current->step(_leds);
         FastLED.show();
     }
+}
+
+// ─── Paramètres effets ───────────────────────────────────────────────────────
+
+void LedManager::setText(String text) {
+    _current->setText(text);
+}
+
+void LedManager::setColor(CRGB color) {
+    _current->setColor(color);
 }
 
 // ─── Luminosité ──────────────────────────────────────────────────────────────

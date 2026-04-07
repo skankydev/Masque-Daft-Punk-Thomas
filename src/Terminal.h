@@ -8,6 +8,8 @@ class Terminal {
 public:
     static Terminal* getInstance();
     void step();
+    
+    void help();
 
 private:
     Terminal();
@@ -24,7 +26,6 @@ private:
     void setupMap();
     void doCommand(String cmd);
 
-    void help();
     void print();
     void reboot();
     void setDefault();
@@ -37,4 +38,6 @@ private:
     void setBrightness(String params);
     void setSpeed(String params);
     void setAutoDelay(String params);
+    void setText(String params);
+    void setColor(String params);
 };

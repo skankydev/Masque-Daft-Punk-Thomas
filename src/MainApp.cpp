@@ -21,6 +21,8 @@ void MainApp::init(){
 
 	_leds = LedManager::getInstance();
 	_terminal = Terminal::getInstance();
+	_myBle = MyBle::getInstance();
+	_myBle->init();
 
 	error("Init ready");
 	//_leds->custome();
@@ -33,4 +35,5 @@ void MainApp::init(){
 void MainApp::step(){
 	_leds->step();
 	_terminal->step();
+	_myBle->doAction();
 }
