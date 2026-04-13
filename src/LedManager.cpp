@@ -9,6 +9,7 @@
 #include "effects/EffetCylon.h"
 #include "effects/EffetHeartBeat.h"
 #include "effects/EffetVisorFire.h"
+#include "effects/EffetPacmanGame.h"
 
 // ─── Registre des effets ─────────────────────────────────────────────────────
 // Pour ajouter un effet : une ligne ici, rien d'autre à toucher.
@@ -28,7 +29,8 @@ static const EffetEntry EFFETS[] = {
     { "Text",       []() -> Effect* { return new EffetText();      } },
     { "Cylon",      []() -> Effect* { return new EffetCylon();     } },
     { "HeartBeat",  []() -> Effect* { return new EffetHeartBeat(); } },
-    { "VisorFire",  []() -> Effect* { return new EffetVisorFire(); } },
+    { "VisorFire",  []() -> Effect* { return new EffetVisorFire();   } },
+    { "PacmanGame", []() -> Effect* { return new EffetPacmanGame(); } },
 };
 
 static const uint8_t NB_EFFETS = sizeof(EFFETS) / sizeof(EFFETS[0]);
@@ -52,8 +54,8 @@ LedManager::LedManager() : _current(nullptr) {
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
 void LedManager::setDefault() {
-    _brightness = 30;
-    _speed      = 30;
+    _brightness = 10;
+    _speed      = 50;
     _lastFrame  = 0;
     _autoMode   = false;
     _lastChange = 0;
