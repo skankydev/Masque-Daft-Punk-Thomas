@@ -10,6 +10,11 @@
 #include "effects/EffetHeartBeat.h"
 #include "effects/EffetVisorFire.h"
 #include "effects/EffetPacmanGame.h"
+#include "effects/EffetGameOfLife.h"
+#include "effects/EffetBounce.h"
+#include "effects/EffetMatrix.h"
+#include "effects/EffetFireworks.h"
+#include "effects/EffetSauron.h"
 
 // ─── Registre des effets ─────────────────────────────────────────────────────
 // Pour ajouter un effet : une ligne ici, rien d'autre à toucher.
@@ -30,7 +35,12 @@ static const EffetEntry EFFETS[] = {
     { "Cylon",      []() -> Effect* { return new EffetCylon();     } },
     { "HeartBeat",  []() -> Effect* { return new EffetHeartBeat(); } },
     { "VisorFire",  []() -> Effect* { return new EffetVisorFire();   } },
-    { "PacmanGame", []() -> Effect* { return new EffetPacmanGame(); } },
+    { "PacmanGame",  []() -> Effect* { return new EffetPacmanGame();  } },
+    { "GameOfLife",  []() -> Effect* { return new EffetGameOfLife(); } },
+    { "Bounce",      []() -> Effect* { return new EffetBounce();    } },
+    { "Matrix",      []() -> Effect* { return new EffetMatrix();    } },
+    { "Fireworks",   []() -> Effect* { return new EffetFireworks(); } },
+    { "Sauron",      []() -> Effect* { return new EffetSauron();   } },
 };
 
 static const uint8_t NB_EFFETS = sizeof(EFFETS) / sizeof(EFFETS[0]);

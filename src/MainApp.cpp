@@ -13,7 +13,7 @@ MainApp::MainApp() {
  */
 void MainApp::init(){
 	Serial.begin(115200);
-	success("LED ARGB - Matrix 8x32");
+	success("LED ARGB - Matrix 32x8");
 
 	int reason = esp_reset_reason();
 	String message = getResetReason(reason);
