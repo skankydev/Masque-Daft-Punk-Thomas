@@ -44,6 +44,8 @@ class LedManager {
 
         uint8_t effectCount();
         String  effectName(uint8_t index);
+        String  effectJson(uint8_t index);
+        String  effectListJson();
 
         void setText(String text);
         void setColor(CRGB color);

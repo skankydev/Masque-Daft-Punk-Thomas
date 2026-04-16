@@ -47,10 +47,14 @@ class EffetHeartBeat : public Effect {
         }
     }
 
+    CRGB _color;
+
 public:
-    EffetHeartBeat() : _phase(0), _x(0), _holdCount(0) {
+    EffetHeartBeat() : _phase(0), _x(0), _holdCount(0), _color(CRGB::Red) {
         _buildEcg();
     }
+
+    void setColor(CRGB color) override { _color = color; }
 
     void reset() override {
         _phase     = 0;
@@ -64,7 +68,7 @@ public:
             if (_x == 0) fill_solid(leds, NUM_LEDS, CRGB::Black);
 
             // Dessine la colonne courante — une seule ligne
-            leds[XY(_x, _ecg[_x])] = CRGB::Red;
+            leds[XY(_x, _ecg[_x])] = _color;
 
             _x++;
             if (_x >= MATRIX_W) {

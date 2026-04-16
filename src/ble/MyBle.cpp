@@ -3,11 +3,13 @@
 #include "LedManager.h"
 
 
-class BleServerCallbacks : public BLEServerCallbacks 
+class BleServerCallbacks : public BLEServerCallbacks
 {
 	void onConnect(BLEServer* pServer){
 		MyBle* ble = MyBle::getInstance();
 		ble->setConnected();
+		// Met à jour la liste des effets lisible par le tel
+		ble->updateEffectList();
 	}
 
 	void onDisconnect(BLEServer* pServer){
@@ -144,6 +146,11 @@ void MyBle::doAction(){
 		warning("BLE commande inconnue : " + cmd);
 	}
 
+}
+
+void MyBle::updateEffectList() {
+    String json = LedManager::getInstance()->effectListJson();
+    _notifieur->setValue(json.c_str());
 }
 
 void MyBle::cancelConnect(){

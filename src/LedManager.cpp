@@ -1,10 +1,8 @@
 #include "LedManager.h"
 #include "effects/EffetRainbow.h"
 #include "effects/EffetFire.h"
-#include "effects/EffetColorWave.h"
 #include "effects/EffetScanner.h"
 #include "effects/EffetRain.h"
-#include "effects/EffetPacman.h"
 #include "effects/EffetText.h"
 #include "effects/EffetCylon.h"
 #include "effects/EffetHeartBeat.h"
@@ -15,32 +13,37 @@
 #include "effects/EffetMatrix.h"
 #include "effects/EffetFireworks.h"
 #include "effects/EffetSauron.h"
+#include "effects/EffetKawaii.h"
 
 // ─── Registre des effets ─────────────────────────────────────────────────────
 // Pour ajouter un effet : une ligne ici, rien d'autre à toucher.
+// defaultColor : couleur CSS "#RRGGBB", nullptr = pas de couleur
+// defaultText  : texte par défaut, nullptr = pas de texte
 
 struct EffetEntry {
-    const char*   nom;
-    Effect*       (*create)();
+    const char* nom;
+    Effect*     (*create)();
+    uint32_t    defaultSpeed;  // ms par frame
+    const char* defaultColor;  // nullptr = non supporté
+    const char* defaultText;   // nullptr = non supporté
 };
 
 static const EffetEntry EFFETS[] = {
-    { "Rainbow",    []() -> Effect* { return new EffetRainbow();   } },
-    { "Fire",       []() -> Effect* { return new EffetFire();      } },
-    { "Color Wave", []() -> Effect* { return new EffetColorWave(); } },
-    { "Scanner",    []() -> Effect* { return new EffetScanner();   } },
-    { "Rain",       []() -> Effect* { return new EffetRain();      } },
-    { "Pacman",     []() -> Effect* { return new EffetPacman();   } },
-    { "Text",       []() -> Effect* { return new EffetText();      } },
-    { "Cylon",      []() -> Effect* { return new EffetCylon();     } },
-    { "HeartBeat",  []() -> Effect* { return new EffetHeartBeat(); } },
-    { "VisorFire",  []() -> Effect* { return new EffetVisorFire();   } },
-    { "PacmanGame",  []() -> Effect* { return new EffetPacmanGame();  } },
-    { "GameOfLife",  []() -> Effect* { return new EffetGameOfLife(); } },
-    { "Bounce",      []() -> Effect* { return new EffetBounce();    } },
-    { "Matrix",      []() -> Effect* { return new EffetMatrix();    } },
-    { "Fireworks",   []() -> Effect* { return new EffetFireworks(); } },
-    { "Sauron",      []() -> Effect* { return new EffetSauron();   } },
+    { "Rainbow",    []() -> Effect* { return new EffetRainbow();    }, 50,  nullptr,    nullptr   },
+    { "Fire",       []() -> Effect* { return new EffetFire();       }, 30,  "#FF5000",  nullptr   },
+    { "Scanner",    []() -> Effect* { return new EffetScanner();    }, 30,  "#FF0000",  nullptr   },
+    { "Rain",       []() -> Effect* { return new EffetRain();       }, 50,  "#1E64FF",  nullptr   },
+    { "Text",       []() -> Effect* { return new EffetText();       }, 80,  "#FF0000",  "Daft Punk"  },
+    { "Cylon",      []() -> Effect* { return new EffetCylon();      }, 40,  "#FF0000",  nullptr   },
+    { "HeartBeat",  []() -> Effect* { return new EffetHeartBeat();  }, 50,  "#FF0000",  nullptr   },
+    { "VisorFire",  []() -> Effect* { return new EffetVisorFire();  }, 30,  nullptr,    nullptr   },
+    { "PacmanGame", []() -> Effect* { return new EffetPacmanGame(); }, 80,  nullptr,    nullptr   },
+    { "GameOfLife", []() -> Effect* { return new EffetGameOfLife(); }, 200, "#00FF00",  nullptr   },
+    { "Bounce",     []() -> Effect* { return new EffetBounce();     }, 50,  "#FF0000",  nullptr   },
+    { "Matrix",     []() -> Effect* { return new EffetMatrix();     }, 40,  "#00C800",  nullptr   },
+    { "Fireworks",  []() -> Effect* { return new EffetFireworks();  }, 30,  nullptr,    nullptr   },
+    { "Sauron",     []() -> Effect* { return new EffetSauron();     }, 40,  nullptr,    nullptr   },
+    { "Kawaii",     []() -> Effect* { return new EffetKawaii();     }, 60,  "#FF1478",  nullptr   },
 };
 
 static const uint8_t NB_EFFETS = sizeof(EFFETS) / sizeof(EFFETS[0]);
@@ -82,6 +85,18 @@ void LedManager::_setEffectByIndex(uint8_t index) {
     delete _current;
     _effectIndex = index;
     _current = EFFETS[index].create();
+
+    // Applique les valeurs par défaut de l'effet
+    _speed = EFFETS[index].defaultSpeed;
+    FastLED.setBrightness(_brightness);
+
+    if (EFFETS[index].defaultColor != nullptr) {
+        uint32_t hex = strtol(EFFETS[index].defaultColor + 1, nullptr, 16); // +1 pour sauter le '#'
+        _current->setColor(CRGB((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF));
+    }
+    if (EFFETS[index].defaultText != nullptr) {
+        _current->setText(String(EFFETS[index].defaultText));
+    }
 }
 
 void LedManager::setEffect(uint8_t index) {
@@ -108,6 +123,31 @@ uint8_t LedManager::effectCount() {
 String LedManager::effectName(uint8_t index) {
     if (index >= NB_EFFETS) return "";
     return EFFETS[index].nom;
+}
+
+String LedManager::effectJson(uint8_t index) {
+    if (index >= NB_EFFETS) return "";
+    const EffetEntry& e = EFFETS[index];
+    String json = "{";
+    json += "\"idx\":"      + String(index);
+    json += ",\"name\":\""  + String(e.nom) + "\"";
+    json += ",\"speed\":"   + String(e.defaultSpeed);
+    if (e.defaultColor != nullptr)
+        json += ",\"color\":\"" + String(e.defaultColor) + "\"";
+    if (e.defaultText != nullptr)
+        json += ",\"text\":\"" + String(e.defaultText) + "\"";
+    json += "}";
+    return json;
+}
+
+String LedManager::effectListJson() {
+    String json = "[";
+    for (uint8_t i = 0; i < NB_EFFETS; i++) {
+        if (i > 0) json += ",";
+        json += effectJson(i);
+    }
+    json += "]";
+    return json;
 }
 
 // ─── Loop ────────────────────────────────────────────────────────────────────

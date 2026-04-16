@@ -52,7 +52,8 @@ public:
 
             for (uint8_t y = 0; y < 7; y++) {
                 if (fontByte & (1 << y)) {
-                    leds[XY(x, y)] = _color;
+                    uint8_t py = y + 1; // décalage vertical d'1px vers le bas
+                    if (py < MATRIX_H) leds[XY(x, py)] = _color;
                 }
             }
         }

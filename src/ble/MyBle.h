@@ -49,6 +49,7 @@ class MyBle{
 
 		void setAction(String value);
 		void doAction();
+		void updateEffectList();
 
 		void cancelConnect();
 };

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(move \"E:\\\\Dev\\\\Module\\\\Matrix\\\\src\\\\effects\\\\EffetColorWave.h\" \"E:\\\\Dev\\\\Module\\\\Matrix\\\\archive\\\\\" && move \"E:\\\\Dev\\\\Module\\\\Matrix\\\\src\\\\effects\\\\EffetPacman.h\" \"E:\\\\Dev\\\\Module\\\\Matrix\\\\archive\\\\\")"
+    ]
+  }
+}

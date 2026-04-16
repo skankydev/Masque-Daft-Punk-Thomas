@@ -2,9 +2,28 @@
 #include "Effect.h"
 
 class EffetFire : public Effect {
+
     uint8_t _heat[MATRIX_W][MATRIX_H] = {};
+    CRGB    _color;
+
+    // Mappe la chaleur (0-255) sur un dégradé noir → couleur → blanc
+    CRGB _heatToColor(uint8_t heat) {
+        if (heat < 128) {
+            // noir → couleur
+            CRGB c = _color;
+            c.nscale8(heat * 2);
+            return c;
+        } else {
+            // couleur → blanc
+            return blend(_color, CRGB::White, (heat - 128) * 2);
+        }
+    }
 
 public:
+    EffetFire() : _color(CRGB(255, 80, 0)) {} // orange feu par défaut
+
+    void setColor(CRGB color) override { _color = color; }
+
     void reset() override {
         memset(_heat, 0, sizeof(_heat));
     }
@@ -13,7 +32,8 @@ public:
         // Refroidissement
         for (uint8_t x = 0; x < MATRIX_W; x++) {
             for (uint8_t y = 0; y < MATRIX_H; y++) {
-                _heat[x][y] = qsub8(_heat[x][y], random8(0, 20));
+            	//plus les valeurs sont hautes, plus ça refroidit vite
+                _heat[x][y] = qsub8(_heat[x][y], random8(35, 50));
             }
         }
 
@@ -24,18 +44,18 @@ public:
             }
         }
 
-        // Ignition sur la ligne du bas
+        // Allumage
         for (uint8_t x = 0; x < MATRIX_W; x++) {
-            if (random8() < 120) {
-                _heat[x][0] = qadd8(_heat[x][0], random8(160, 255));
+            if (random8() < 100) {
+                //plus les valeurs sont hautes, plus la source est chaude
+                _heat[x][0] = qadd8(_heat[x][0], random8(50, 130));
             }
         }
 
-        // Rendu (ligne 0 = bas visuel)
-        // scale8 plafonne à 200/255 → pas de blanc, max jaune
+        // Rendu
         for (uint8_t x = 0; x < MATRIX_W; x++) {
             for (uint8_t y = 0; y < MATRIX_H; y++) {
-                leds[XY(x, MATRIX_H - 1 - y)] = HeatColor(scale8(_heat[x][y], 200));
+                leds[XY(x, MATRIX_H - 1 - y)] = _heatToColor(_heat[x][y]);
             }
         }
     }
