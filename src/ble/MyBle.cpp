@@ -8,8 +8,6 @@ class BleServerCallbacks : public BLEServerCallbacks
 	void onConnect(BLEServer* pServer){
 		MyBle* ble = MyBle::getInstance();
 		ble->setConnected();
-		// Met à jour la liste des effets lisible par le tel
-		ble->updateEffectList();
 	}
 
 	void onDisconnect(BLEServer* pServer){
@@ -80,7 +78,7 @@ void MyBle::sendNotif(String message){
 	Serial.println(message);
 	_notifieur->setValue(message.c_str());
 	_notifieur->notify();
-	delay(500);
+	delay(100);
 }
 
 bool MyBle::setConnected(){
@@ -120,10 +118,20 @@ void MyBle::doAction(){
 	int sep       = action.indexOf(':');
 	String cmd    = (sep == -1) ? action : action.substring(0, sep);
 	String param  = (sep == -1) ? ""     : action.substring(sep + 1);
+	Serial.println("BLE cmd : " + cmd);
 
 	LedManager* leds = LedManager::getInstance();
 
-	if (cmd == "PRINT") {
+	if (cmd == "getEffects") {
+		// Envoie chaque effet en notif séparée avec délai court
+		uint8_t count = leds->effectCount();
+		this->sendNotif(("{\"count\":" + String(count) + "}").c_str());
+		delay(50);
+		for (uint8_t i = 0; i < count; i++) {
+			String json = leds->effectJson(i);
+			this->sendNotif(json.c_str());
+		}
+	} else if (cmd == "PRINT") {
 		Terminal::getInstance()->help();
 	} else if (cmd == "REBOOT") {
 		ESP.restart();
@@ -131,6 +139,25 @@ void MyBle::doAction(){
 		leds->setNextEffect();
 	} else if (cmd == "default") {
 		leds->setDefault();
+	} else if (cmd == "setEffectFull") {
+		// Format : id|speed|color|text  (color et text optionnels)
+		int p1 = param.indexOf('|');
+		int p2 = p1 == -1 ? -1 : param.indexOf('|', p1 + 1);
+		int p3 = p2 == -1 ? -1 : param.indexOf('|', p2 + 1);
+
+		uint8_t  idx   = param.toInt();
+		uint32_t speed = p1 == -1 ? 0 : param.substring(p1 + 1).toInt();
+		String   color = p2 == -1 ? "" : param.substring(p2 + 1, p3 == -1 ? param.length() : p3);
+		String   text  = p3 == -1 ? "" : param.substring(p3 + 1);
+
+		leds->setEffect(idx);
+		if (speed > 0)        leds->setSpeed(speed);
+		if (color.length() > 0) {
+			uint32_t hex = strtol(color.c_str(), NULL, 16);
+			leds->setColor(CRGB((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF));
+		}
+		if (text.length() > 0) leds->setText(text);
+
 	} else if (cmd == "setEffect") {
 		leds->setEffect((uint8_t)param.toInt());
 	} else if (cmd == "setBrightness") {
@@ -149,8 +176,7 @@ void MyBle::doAction(){
 }
 
 void MyBle::updateEffectList() {
-    String json = LedManager::getInstance()->effectListJson();
-    _notifieur->setValue(json.c_str());
+    // Réservé — liste envoyée via notifs sur commande getEffects
 }
 
 void MyBle::cancelConnect(){

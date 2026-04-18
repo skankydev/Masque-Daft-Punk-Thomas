@@ -17,6 +17,7 @@ Terminal::Terminal() {
 void Terminal::setupMap() {
     _command["help"]    = &Terminal::help;
     _command["print"]   = &Terminal::print;
+    _command["system"] = &Terminal::system;
     _command["reboot"]  = &Terminal::reboot;
     _command["default"] = &Terminal::setDefault;
     _command["next"]    = &Terminal::next;
@@ -86,6 +87,7 @@ void Terminal::help() {
     Serial.println(violet("╔══════════ ") + vertVif("Matrix Terminal") + violet(" ══════════"));
     printLigne("help",          "",        "Affiche cette aide",              "bleu");
     printLigne("print",         "",        "Etat courant",                    "bleu");
+    printLigne("system",        "",        "Affiche les information System",  "bleu");
     printLigne("reboot",        "",        "Redémarre l'ESP32",               "rouge");
     printLigne("default",       "",        "Reset config",                    "vert");
     printLigne("next",          "",        "Effet suivant",                   "vert");
@@ -109,6 +111,11 @@ void Terminal::help() {
 
 void Terminal::print() {
     _leds->print();
+}
+
+void Terminal::system() {
+    printSystemInfo();
+    printAllPartitions();
 }
 
 void Terminal::reboot() {

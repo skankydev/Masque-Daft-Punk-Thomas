@@ -28,6 +28,7 @@ private:
 
     void print();
     void reboot();
+    void system();
     void setDefault();
     void next();
     void upBrightness();

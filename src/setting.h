@@ -13,7 +13,7 @@
 #define MATRIX_H   8
 #define NUM_LEDS  (MATRIX_W * MATRIX_H)
 
-#define PIN_LEDS  13
+#define PIN_LEDS  15
 
 #define EFFECT_COUNT 5
 
