@@ -13,7 +13,7 @@ MicManager* MicManager::getInstance() {
 	return instance;
 }
 
-MicManager::MicManager() : _volume(0.0f), _sensitivity(1.0f), _noiseFloor(0.12f) {
+MicManager::MicManager() : _volume(0.0f), _sensitivity(1.0f), _noiseFloor(0.08f) {
 	_mutex = xSemaphoreCreateMutex();
 	memset(_bands, 0, sizeof(_bands));
 	memset(_vReal,  0, sizeof(_vReal));

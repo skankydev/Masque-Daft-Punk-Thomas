@@ -15,6 +15,8 @@
 #include "effects/EffetSauron.h"
 #include "effects/EffetKawaii.h"
 #include "effects/EffetAudio.h"
+#include "effects/EffetAudio2.h"
+#include "effects/EffetAudio3.h"
 
 // ─── Registre des effets ─────────────────────────────────────────────────────
 // Pour ajouter un effet : une ligne ici, rien d'autre à toucher.
@@ -46,6 +48,8 @@ static const EffetEntry EFFETS[] = {
 	{ "Sauron",     []() -> Effect* { return new EffetSauron();     }, 40,  nullptr,    nullptr   },
 	{ "Kawaii",     []() -> Effect* { return new EffetKawaii();     }, 60,  "#FF1478",  nullptr   },
 	{ "Audio",      []() -> Effect* { return new EffetAudio();     }, 30,  "#00C8FF",  nullptr   },
+	{ "Audio2",     []() -> Effect* { return new EffetAudio2();    }, 30,  nullptr,    nullptr   },
+	{ "Audio3",     []() -> Effect* { return new EffetAudio3();    }, 30,  "#00C8FF",  nullptr   },
 };
 
 static const uint8_t NB_EFFETS = sizeof(EFFETS) / sizeof(EFFETS[0]);

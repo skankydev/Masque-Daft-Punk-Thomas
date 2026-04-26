@@ -47,14 +47,8 @@ class EffetAudio : public Effect {
 					uint8_t row = MATRIX_H - 1 - y; // row 0 = haut, on dessine de bas en haut
 
 					if (y < barH) {
-						// Dégradé : couleur de base en bas, tend vers blanc au sommet
-						uint8_t t = (barH > 1) ? (uint8_t)((float)y / (barH - 1) * 255) : 0;
-						CRGB c = CRGB(
-							lerp8by8(_color.r, 255, t),
-							lerp8by8(_color.g, 255, t),
-							lerp8by8(_color.b, 255, t)
-						);
-						leds[XY(x, row)] = c;
+						// Dernière led (sommet) en blanc, reste en couleur de base
+						leds[XY(x, row)] = (y == barH - 1) ? CRGB::White : _color;
 					}
 
 					// Pixel peak (blanc légèrement teinté)
