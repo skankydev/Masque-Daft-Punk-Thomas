@@ -3,6 +3,8 @@
 Contrôleur de matrice LED WS2812B pour masque style Thomas Bangalter (Daft Punk).  
 Piloté via une app mobile Bluetooth BLE.
 
+> App mobile : [Daft-Punk-LED-Controller](https://github.com/skankydev/Daft-Punk-LED-Controller)
+
 ---
 
 ## Hardware
@@ -11,7 +13,7 @@ Piloté via une app mobile Bluetooth BLE.
 |-----------|--------|
 | Carte | ESP32-S3-N16R8 |
 | LEDs | WS2812B flexible 32×8 (256 LEDs) |
-| Pin LEDs | GPIO 13 (défini dans `setting.h`) |
+| Pin LEDs | GPIO 15 (défini dans `setting.h`) |
 | Communication | BLE (pas de WiFi) |
 
 **Serpentin vertical** : colonne paire haut→bas, colonne impaire bas→haut.

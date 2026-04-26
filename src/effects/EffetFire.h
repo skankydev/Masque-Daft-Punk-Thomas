@@ -3,62 +3,62 @@
 
 class EffetFire : public Effect {
 
-    uint8_t _heat[MATRIX_W][MATRIX_H] = {};
-    CRGB    _color;
+		uint8_t _heat[MATRIX_W][MATRIX_H] = {};
+		CRGB    _color;
 
-    // Mappe la chaleur (0-255) sur un dégradé noir → couleur → blanc
-    CRGB _heatToColor(uint8_t heat) {
-        if (heat < 128) {
-            // noir → couleur
-            CRGB c = _color;
-            c.nscale8(heat * 2);
-            return c;
-        } else {
-            // couleur → blanc
-            return blend(_color, CRGB::White, (heat - 128) * 2);
-        }
-    }
+		// Mappe la chaleur (0-255) sur un dégradé noir → couleur → blanc
+		CRGB _heatToColor(uint8_t heat) {
+			if (heat < 128) {
+				// noir → couleur
+				CRGB c = _color;
+				c.nscale8(heat * 2);
+				return c;
+			} else {
+				// couleur → blanc
+				return blend(_color, CRGB::White, (heat - 128) * 2);
+			}
+		}
 
-public:
-    EffetFire() : _color(CRGB(255, 80, 0)) {} // orange feu par défaut
+	public:
+		EffetFire() : _color(CRGB(255, 80, 0)) {} // orange feu par défaut
 
-    void setColor(CRGB color) override { _color = color; }
+		void setColor(CRGB color) override { _color = color; }
 
-    void reset() override {
-        memset(_heat, 0, sizeof(_heat));
-    }
+		void reset() override {
+			memset(_heat, 0, sizeof(_heat));
+		}
 
-    void step(CRGB* leds) override {
-        // Refroidissement
-        for (uint8_t x = 0; x < MATRIX_W; x++) {
-            for (uint8_t y = 0; y < MATRIX_H; y++) {
-            	//plus les valeurs sont hautes, plus ça refroidit vite
-                _heat[x][y] = qsub8(_heat[x][y], random8(35, 50));
-            }
-        }
+		void step(CRGB* leds) override {
+			// Refroidissement
+			for (uint8_t x = 0; x < MATRIX_W; x++) {
+				for (uint8_t y = 0; y < MATRIX_H; y++) {
+					//plus les valeurs sont hautes, plus ça refroidit vite
+					_heat[x][y] = qsub8(_heat[x][y], random8(35, 50));
+				}
+			}
 
-        // Propagation vers le haut
-        for (uint8_t x = 0; x < MATRIX_W; x++) {
-            for (uint8_t y = MATRIX_H - 1; y > 0; y--) {
-                _heat[x][y] = (_heat[x][y - 1] + _heat[x][max(0, y - 2)] * 2) / 3;
-            }
-        }
+			// Propagation vers le haut
+			for (uint8_t x = 0; x < MATRIX_W; x++) {
+				for (uint8_t y = MATRIX_H - 1; y > 0; y--) {
+					_heat[x][y] = (_heat[x][y - 1] + _heat[x][max(0, y - 2)] * 2) / 3;
+				}
+			}
 
-        // Allumage
-        for (uint8_t x = 0; x < MATRIX_W; x++) {
-            if (random8() < 100) {
-                //plus les valeurs sont hautes, plus la source est chaude
-                _heat[x][0] = qadd8(_heat[x][0], random8(50, 130));
-            }
-        }
+			// Allumage
+			for (uint8_t x = 0; x < MATRIX_W; x++) {
+				if (random8() < 100) {
+					//plus les valeurs sont hautes, plus la source est chaude
+					_heat[x][0] = qadd8(_heat[x][0], random8(50, 130));
+				}
+			}
 
-        // Rendu
-        for (uint8_t x = 0; x < MATRIX_W; x++) {
-            for (uint8_t y = 0; y < MATRIX_H; y++) {
-                leds[XY(x, MATRIX_H - 1 - y)] = _heatToColor(_heat[x][y]);
-            }
-        }
-    }
+			// Rendu
+			for (uint8_t x = 0; x < MATRIX_W; x++) {
+				for (uint8_t y = 0; y < MATRIX_H; y++) {
+					leds[XY(x, MATRIX_H - 1 - y)] = _heatToColor(_heat[x][y]);
+				}
+			}
+		}
 
-    String name() override { return "Fire"; }
+		String name() override { return "Fire"; }
 };

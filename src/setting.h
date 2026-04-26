@@ -15,6 +15,9 @@
 
 #define PIN_LEDS  15
 
-#define EFFECT_COUNT 5
+// INMP441 — micro numérique I2S
+#define PIN_MIC_SCK  41
+#define PIN_MIC_WS   42
+#define PIN_MIC_SD    2
 
 #endif
