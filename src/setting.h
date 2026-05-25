@@ -9,7 +9,7 @@
 #include <SPI.h>
 #include "function.h"
 
-#define MATRIX_W  32
+#define MATRIX_W  48
 #define MATRIX_H   8
 #define NUM_LEDS  (MATRIX_W * MATRIX_H)
 
@@ -21,3 +21,4 @@
 #define PIN_MIC_SD    2
 
 #endif
+
