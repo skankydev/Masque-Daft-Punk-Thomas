@@ -96,5 +96,25 @@ class EffetHeartBeat : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Double battement cardiaque — cycle 1s
+			uint32_t t = millis() % 900;
+			uint8_t bright = 0;
+			if      (t < 80)   bright = t * 3;           // montée 1
+			else if (t < 160)  bright = (160 - t) * 3;   // descente 1
+			else if (t < 240)  bright = (t - 160) * 2;   // montée 2
+			else if (t < 320)  bright = (320 - t) * 2;   // descente 2
+			CRGB c = _color;
+			c.nscale8(bright);
+			fill_solid(strip, len, c);
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			// Lueur ambiante pulsée lente
+			CRGB c = _color;
+			c.nscale8(beatsin8(8, 15, 60));
+			fill_solid(strip, len, c);
+		}
+
 		String name() override { return "HeartBeat"; }
 };

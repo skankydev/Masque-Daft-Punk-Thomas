@@ -29,5 +29,19 @@ class EffetScanner : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Point scanner synchronisé — position mappée depuis la matrice
+			fill_solid(strip, len, CRGB::Black);
+			uint8_t pos = _pos * (len - 1) / (MATRIX_W - 1);
+			strip[pos] = CHSV(_hue, 255, 255);
+			if (pos > 0)       strip[pos - 1] = CHSV(_hue, 255, 80);
+			if (pos < len - 1) strip[pos + 1] = CHSV(_hue, 255, 80);
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			// Lueur ambiante dans la couleur courante
+			fill_solid(strip, len, CHSV(_hue, 255, 60));
+		}
+
 		String name() override { return "Scanner"; }
 };

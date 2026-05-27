@@ -97,6 +97,24 @@ class EffetSauron : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Feu 1D avec la palette Sauron — plus chaud en bas
+			for (uint8_t i = 0; i < len; i++) {
+				uint8_t idx = qsub8(99 - i * (99 / len), random8(0, 15));
+				strip[i] = _palette[idx];
+			}
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			// Blocs fixes : rouge → orange → jaune issus de la palette
+			uint8_t third = len / 3;
+			for (uint8_t i = 0; i < len; i++) {
+				if      (i < third)     strip[i] = _palette[35];  // rouge
+				else if (i < third * 2) strip[i] = _palette[65];  // orange
+				else                    strip[i] = _palette[90];  // jaune
+			}
+		}
+
 		String name() override { return "Sauron"; }
 };
 

@@ -11,6 +11,10 @@ class LedManager {
 		LedManager();
 
 		CRGB    _leds[NUM_LEDS];
+		CRGB    _stripRT[NUM_STRIP_RIGHT_TOP];
+		CRGB    _stripRB[NUM_STRIP_RIGHT_BOT];
+		CRGB    _stripLT[NUM_STRIP_LEFT_TOP];
+		CRGB    _stripLB[NUM_STRIP_LEFT_BOT];
 		Effect* _current;
 		uint8_t _effectIndex;
 

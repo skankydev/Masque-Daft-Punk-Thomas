@@ -60,5 +60,24 @@ class EffetFire : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Feu 1D — plus chaud en bas (index len-1), plus froid en haut (index 0)
+			for (uint8_t i = 0; i < len; i++) {
+				uint8_t base = 220 - i * (220 / len);
+				uint8_t heat = qsub8(base, random8(0, 40));
+				strip[i] = _heatToColor(heat);
+			}
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			// Blocs fixes : rouge → orange → jaune
+			uint8_t third = len / 3;
+			for (uint8_t i = 0; i < len; i++) {
+				if      (i < third)         strip[i] = CRGB(255,  20,   0);  // rouge
+				else if (i < third * 2)     strip[i] = CRGB(255, 120,   0);  // orange
+				else                        strip[i] = CRGB(255, 220,   0);  // jaune
+			}
+		}
+
 		String name() override { return "Fire"; }
 };

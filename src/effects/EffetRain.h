@@ -42,5 +42,20 @@ class EffetRain : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Goutte qui descend en boucle
+			fill_solid(strip, len, CRGB::Black);
+			uint8_t pos = (millis() / 80) % (len + 2);
+			if (pos < len)     { strip[pos] = _color; }
+			if (pos > 0 && pos - 1 < len) { strip[pos - 1] = _color; strip[pos - 1].nscale8(100); }
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			// Lueur ambiante pulsée
+			CRGB c = _color;
+			c.nscale8(beatsin8(15, 30, 90));
+			fill_solid(strip, len, c);
+		}
+
 		String name() override { return "Rain"; }
 };

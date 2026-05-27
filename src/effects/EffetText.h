@@ -65,5 +65,17 @@ class EffetText : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			CRGB c = _color;
+			c.nscale8(beatsin8(20, 60, 255));
+			fill_solid(strip, len, c);
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			CRGB c = _color;
+			c.nscale8(beatsin8(20, 60, 255));
+			fill_solid(strip, len, c);
+		}
+
 		String name() override { return "Text"; }
 };

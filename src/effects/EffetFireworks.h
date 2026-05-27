@@ -135,6 +135,28 @@ class EffetFireworks : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Flashs colorés — chaque LED clignote indépendamment
+			uint32_t t = millis();
+			for (uint8_t i = 0; i < len; i++) {
+				uint8_t phase = (t / 80 + i * 41) % 200;
+				if (phase < 30) {
+					strip[i] = PALETTE[(t / 400 + i) % NB_COULEURS];
+					strip[i].nscale8(255 - phase * 7);
+				} else {
+					strip[i] = CRGB::Black;
+				}
+			}
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			// Blocs fixes festifs — une couleur de palette par LED
+			for (uint8_t i = 0; i < len; i++) {
+				strip[i] = PALETTE[i % NB_COULEURS];
+				strip[i].nscale8(80);
+			}
+		}
+
 		String name() override { return "Fireworks"; }
 };
 

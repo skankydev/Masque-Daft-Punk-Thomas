@@ -41,6 +41,31 @@ class EffetAudio2 : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			MicManager* mic = MicManager::getInstance();
+			float avg = 0;
+			for (uint8_t i = 0; i < MATRIX_W; i++) avg += mic->getBand(i);
+			avg /= MATRIX_W;
+			uint8_t filled = (uint8_t)(avg * len);
+			// Dégradé rouge→vert sur la longueur de la strip
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = (i < filled) ? _barColor(i * (MATRIX_H - 1) / (len - 1)) : CRGB::Black;
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			MicManager* mic = MicManager::getInstance();
+			float bass = 0;
+			for (uint8_t i = 0; i < MATRIX_W / 4; i++) bass += mic->getBand(i);
+			bass /= (MATRIX_W / 4);
+			uint8_t bright = (uint8_t)(bass * 255);
+			uint8_t third  = len / 3;
+			for (uint8_t i = 0; i < len; i++) {
+				CRGB c = _barColor(i * (MATRIX_H - 1) / (len - 1));
+				c.nscale8(max((uint8_t)20, bright));
+				strip[i] = c;
+			}
+		}
+
 	private:
 		// Dégradé fixe : rouge (y=0) → jaune (y=milieu) → vert (y=haut)
 		CRGB _barColor(uint8_t y) {

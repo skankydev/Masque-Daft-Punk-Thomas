@@ -111,6 +111,22 @@ class EffetPacmanGame : public Effect {
 			_drawPac(leds, _phase == 1);
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Pac-Man sur la strip — LED jaune qui suit sa position X
+			fill_solid(strip, len, CRGB::Black);
+			int16_t clampedX = constrain(_pacX, 0, MATRIX_W - 1);
+			uint8_t pos = clampedX * (len - 1) / (MATRIX_W - 1);
+			strip[pos] = CRGB::Yellow;
+			if (pos > 0)       strip[pos - 1] = CRGB(80, 80, 0);
+			if (pos < len - 1) strip[pos + 1] = CRGB(80, 80, 0);
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			// Bleu arcade en phase 0, rouge quand le fantôme chasse
+			CRGB c = (_phase == 0) ? CRGB(0, 0, 80) : CRGB(80, 0, 0);
+			fill_solid(strip, len, c);
+		}
+
 		String name() override { return "PacmanGame"; }
 };
 

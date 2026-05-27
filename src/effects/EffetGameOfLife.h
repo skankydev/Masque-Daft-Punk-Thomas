@@ -82,5 +82,22 @@ class EffetGameOfLife : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Barre de densité : proportion de cellules vivantes
+			uint16_t alive = 0;
+			for (uint8_t y = 0; y < MATRIX_H; y++)
+				for (uint8_t x = 0; x < MATRIX_W; x++)
+					if (_grid[y][x]) alive++;
+			uint8_t filled = alive * len / NUM_LEDS;
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = (i < filled) ? _colorLight : CRGB::Black;
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			CRGB c = _colorLight;
+			c.nscale8(30);
+			fill_solid(strip, len, c);
+		}
+
 		String name() override { return "Game of Life"; }
 };

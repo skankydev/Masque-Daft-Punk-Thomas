@@ -21,5 +21,9 @@ class Effect {
 		// Paramètres optionnels — no-op par défaut, les effets qui en ont besoin les overrident
 		virtual void   setText(String text)  {}
 		virtual void   setColor(CRGB color)  {}
+		// Strips latérales — LedManager appelle stepStripsTop + stepStripsBot séparément
+		// stepStrips : helper optionnel quand top et bot font la même chose
+		virtual void stepStripsTop(CRGB* strip, uint8_t len) {}
+		virtual void stepStripsBot(CRGB* strip, uint8_t len) {}
 		virtual ~Effect() {}
 };

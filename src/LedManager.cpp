@@ -68,7 +68,11 @@ LedManager* LedManager::getInstance() {
 }
 
 LedManager::LedManager() : _current(nullptr) {
-	FastLED.addLeds<WS2812B, PIN_LEDS, GRB>(_leds, NUM_LEDS);
+	FastLED.addLeds<WS2812B, PIN_LEDS,            GRB>(_leds,     NUM_LEDS);
+	FastLED.addLeds<WS2812B, PIN_STRIP_RIGHT_TOP, GRB>(_stripRT,  NUM_STRIP_RIGHT_TOP);
+	FastLED.addLeds<WS2812B, PIN_STRIP_RIGHT_BOT, GRB>(_stripRB,  NUM_STRIP_RIGHT_BOT);
+	FastLED.addLeds<WS2812B, PIN_STRIP_LEFT_TOP,  GRB>(_stripLT,  NUM_STRIP_LEFT_TOP);
+	FastLED.addLeds<WS2812B, PIN_STRIP_LEFT_BOT,  GRB>(_stripLB,  NUM_STRIP_LEFT_BOT);
 	setDefault();
 }
 
@@ -171,6 +175,10 @@ void LedManager::step() {
 	if (now - _lastFrame >= _speed) {
 		_lastFrame = now;
 		_current->step(_leds);
+		_current->stepStripsTop(_stripRT, NUM_STRIP_RIGHT_TOP);
+		_current->stepStripsTop(_stripLT, NUM_STRIP_LEFT_TOP);
+		_current->stepStripsBot(_stripRB, NUM_STRIP_RIGHT_BOT);
+		_current->stepStripsBot(_stripLB, NUM_STRIP_LEFT_BOT);
 		FastLED.show();
 	}
 }

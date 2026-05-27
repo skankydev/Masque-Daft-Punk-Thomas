@@ -12,5 +12,17 @@ class EffetRainbow : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			uint8_t t = millis() >> 4;
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = CHSV(t + i * 8, 255, 255);
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			uint8_t t = millis() >> 4;
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = CHSV(t + i * 8, 255, 255);
+		}
+
 		String name() override { return "Rainbow"; }
 };

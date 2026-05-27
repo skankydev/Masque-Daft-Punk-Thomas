@@ -68,6 +68,24 @@ class EffetBounce : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Point qui suit la position X du sprite
+			fill_solid(strip, len, CRGB::Black);
+			uint8_t pos = constrain(
+				(uint8_t)((_x - HALF) * (len - 1) / (MATRIX_W - 1 - HALF * 2)),
+				0, len - 1
+			);
+			if (pos > 0)       { strip[pos - 1] = _color; strip[pos - 1].nscale8(80); }
+			strip[pos] = _color;
+			if (pos < len - 1) { strip[pos + 1] = _color; strip[pos + 1].nscale8(80); }
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			CRGB c = _color;
+			c.nscale8(40);
+			fill_solid(strip, len, c);
+		}
+
 		String name() override { return "Bounce"; }
 };
 

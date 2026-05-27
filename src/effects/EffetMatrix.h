@@ -81,5 +81,24 @@ class EffetMatrix : public Effect {
 			}
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			fill_solid(strip, len, CRGB::Black);
+			int8_t pos = (millis() / 60) % (len + 4);
+			for (int8_t i = 0; i < (int8_t)len; i++) {
+				if (i == pos) {
+					strip[i] = CRGB(100, 255, 100);          // tête : blanc-vert
+				} else if (i < pos && i >= pos - 4) {
+					uint8_t fade = 255 - (pos - i) * 55;
+					strip[i] = CRGB(0, scale8(_color.g, fade), 0);  // traînée verte
+				}
+			}
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			CRGB c = _color;
+			c.nscale8(beatsin8(10, 20, 70));
+			fill_solid(strip, len, c);
+		}
+
 		String name() override { return "Matrix"; }
 };

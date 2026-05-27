@@ -114,6 +114,29 @@ class EffetKawaii : public Effect {
 			_drawEye(leds, RX, EY, sprR, offR);
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Pulse doux dans la couleur des pupilles
+			CRGB c = _pupilColor;
+			c.nscale8(beatsin8(25, 40, 200));
+			fill_solid(strip, len, c);
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			if (_phase == HAPPY) {
+				// Arc-en-ciel festif quand les yeux sont heureux
+				uint8_t t = millis() >> 4;
+				for (uint8_t i = 0; i < len; i++)
+					strip[i] = CHSV(t + i * 25, 200, 200);
+			} else {
+				// Blocs fixes dégradé pastels autour de la couleur pupille
+				for (uint8_t i = 0; i < len; i++) {
+					CRGB c = _pupilColor;
+					c.nscale8(30 + i * 20);
+					strip[i] = c;
+				}
+			}
+		}
+
 		String name() override { return "Kawaii"; }
 };
 

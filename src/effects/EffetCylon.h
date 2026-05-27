@@ -42,5 +42,21 @@ class EffetCylon : public Effect {
 			if (_pos >= MATRIX_W - 1 || _pos <= 0) _dir = -_dir;
 		}
 
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			// Blob synchronisé avec la matrice
+			fill_solid(strip, len, CRGB::Black);
+			uint8_t pos = _pos * (len - 1) / (MATRIX_W - 1);
+			CRGB med = _color; med.nscale8(130);
+			if (pos > 0)       strip[pos - 1] = med;
+			strip[pos]       = _color;
+			if (pos < len - 1) strip[pos + 1] = med;
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			// Ligne fixe dim — comme la barre horizontale de la matrice
+			CRGB dim = _color; dim.nscale8(50);
+			fill_solid(strip, len, dim);
+		}
+
 		String name() override { return "Cylon"; }
 };
