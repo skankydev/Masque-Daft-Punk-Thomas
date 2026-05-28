@@ -67,6 +67,19 @@ class EffetAudio : public Effect {
 
 		void stepStripsTop(CRGB* strip, uint8_t len) override {
 			MicManager* mic = MicManager::getInstance();
+			// Pulse beat — les oreilles pulsent sur le kick et retombent
+			float beat = mic->getBeatLevel();
+			uint8_t bright = (uint8_t)(beat * 255);
+			CRGB c = CRGB(
+				scale8(_color.r, bright),
+				scale8(_color.g, bright),
+				scale8(_color.b, bright)
+			);
+			for (uint8_t i = 0; i < len; i++) strip[i] = c;
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			MicManager* mic = MicManager::getInstance();
 			// VU-mètre — moyenne de toutes les bandes
 			float avg = 0;
 			for (uint8_t i = 0; i < MATRIX_W; i++) avg += mic->getBand(i);
@@ -74,21 +87,6 @@ class EffetAudio : public Effect {
 			uint8_t filled = (uint8_t)(avg * len);
 			for (uint8_t i = 0; i < len; i++)
 				strip[i] = (i < filled) ? _color : CRGB::Black;
-		}
-
-		void stepStripsBot(CRGB* strip, uint8_t len) override {
-			MicManager* mic = MicManager::getInstance();
-			// Basses — premières bandes
-			float bass = 0;
-			for (uint8_t i = 0; i < MATRIX_W / 4; i++) bass += mic->getBand(i);
-			bass /= (MATRIX_W / 4);
-			uint8_t bright = (uint8_t)(bass * 255);
-			uint8_t third  = len / 3;
-			for (uint8_t i = 0; i < len; i++) {
-				if      (i < third)      strip[i] = CRGB(bright, 0,          0);
-				else if (i < third * 2)  strip[i] = CRGB(bright / 2, bright / 2, 0);
-				else                     strip[i] = CRGB(0,      bright,     0);
-			}
 		}
 
 	private:

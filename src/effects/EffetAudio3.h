@@ -58,16 +58,6 @@ class EffetAudio3 : public Effect {
 
 		void stepStripsTop(CRGB* strip, uint8_t len) override {
 			MicManager* mic = MicManager::getInstance();
-			float avg = 0;
-			for (uint8_t i = 0; i < MATRIX_W; i++) avg += mic->getBand(i);
-			avg /= MATRIX_W;
-			uint8_t filled = (uint8_t)(avg * len);
-			for (uint8_t i = 0; i < len; i++)
-				strip[i] = (i < filled) ? _color : CRGB::Black;
-		}
-
-		void stepStripsBot(CRGB* strip, uint8_t len) override {
-			MicManager* mic = MicManager::getInstance();
 			float bass = 0;
 			for (uint8_t i = 0; i < MATRIX_W / 4; i++) bass += mic->getBand(i);
 			bass /= (MATRIX_W / 4);
@@ -78,6 +68,16 @@ class EffetAudio3 : public Effect {
 				else if (i < third * 2)  strip[i] = CRGB(bright / 2, bright / 2, 0);
 				else                     strip[i] = CRGB(0,      bright,     0);
 			}
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			MicManager* mic = MicManager::getInstance();
+			float avg = 0;
+			for (uint8_t i = 0; i < MATRIX_W; i++) avg += mic->getBand(i);
+			avg /= MATRIX_W;
+			uint8_t filled = (uint8_t)(avg * len);
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = (i < filled) ? _color : CRGB::Black;
 		}
 
 	private:

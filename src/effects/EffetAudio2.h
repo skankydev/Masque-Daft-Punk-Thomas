@@ -4,8 +4,8 @@
 #include "Effect.h"
 #include "../mic/MicManager.h"
 
-// ─── Visualiseur audio — barres larges ───────────────────────────────────────
-// 16 barres de 2 colonnes chacune (MATRIX_W / 2).
+// ─── Visualiseur audio — 32 barres ───────────────────────────────────────────
+// Une barre par colonne (MATRIX_W bandes).
 // Dégradé fixe rouge (bas) → jaune (milieu) → vert (haut).
 
 class EffetAudio2 : public Effect {
@@ -19,40 +19,20 @@ class EffetAudio2 : public Effect {
 
 			fill_solid(leds, NUM_LEDS, CRGB::Black);
 
-			const uint8_t N_BARS = MATRIX_W / 2;  // 16 barres
-
-			for (uint8_t b = 0; b < N_BARS; b++) {
-				// Moyenne des deux bandes FFT correspondantes
-				float band = (mic->getBand(b * 2) + mic->getBand(b * 2 + 1)) * 0.5f;
+			for (uint8_t x = 0; x < MATRIX_W; x++) {
+				float band = mic->getBand(x);
 				uint8_t barH = (uint8_t)(band * MATRIX_H);
 
-				// ── Dessin des deux colonnes ───────────────────────────────────
-				for (uint8_t col = 0; col < 2; col++) {
-					uint8_t x = b * 2 + col;
-
-					for (uint8_t y = 0; y < MATRIX_H; y++) {
-						uint8_t row = MATRIX_H - 1 - y;
-
-						if (y < barH) {
-							leds[XY(x, row)] = _barColor(y);
-						}
+				for (uint8_t y = 0; y < MATRIX_H; y++) {
+					uint8_t row = MATRIX_H - 1 - y;
+					if (y < barH) {
+						leds[XY(x, row)] = _barColor(y);
 					}
 				}
 			}
 		}
 
 		void stepStripsTop(CRGB* strip, uint8_t len) override {
-			MicManager* mic = MicManager::getInstance();
-			float avg = 0;
-			for (uint8_t i = 0; i < MATRIX_W; i++) avg += mic->getBand(i);
-			avg /= MATRIX_W;
-			uint8_t filled = (uint8_t)(avg * len);
-			// Dégradé rouge→vert sur la longueur de la strip
-			for (uint8_t i = 0; i < len; i++)
-				strip[i] = (i < filled) ? _barColor(i * (MATRIX_H - 1) / (len - 1)) : CRGB::Black;
-		}
-
-		void stepStripsBot(CRGB* strip, uint8_t len) override {
 			MicManager* mic = MicManager::getInstance();
 			float bass = 0;
 			for (uint8_t i = 0; i < MATRIX_W / 4; i++) bass += mic->getBand(i);
@@ -64,6 +44,17 @@ class EffetAudio2 : public Effect {
 				c.nscale8(max((uint8_t)20, bright));
 				strip[i] = c;
 			}
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			MicManager* mic = MicManager::getInstance();
+			float avg = 0;
+			for (uint8_t i = 0; i < MATRIX_W; i++) avg += mic->getBand(i);
+			avg /= MATRIX_W;
+			uint8_t filled = (uint8_t)(avg * len);
+			// Dégradé rouge→vert sur la longueur de la strip
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = (i < filled) ? _barColor(i * (MATRIX_H - 1) / (len - 1)) : CRGB::Black;
 		}
 
 	private:

@@ -13,6 +13,14 @@ inline uint16_t XY(uint8_t x, uint8_t y) {
 	return (x * MATRIX_H) + y;
 }
 
+// Couleur audio-réactive — mappe un centroid spectral [0, 1] vers une palette
+// rouge (basses) → vert (médiums) → bleu (aigus) → violet (très aigus)
+// Hue HSV : 0 = rouge, 96 = vert, 160 = bleu, 192 = violet
+inline CRGB audioColor(float centroid) {
+	uint8_t hue = (uint8_t)(constrain(centroid, 0.0f, 1.0f) * 192.0f);
+	return CHSV(hue, 255, 255);
+}
+
 class Effect {
 	public:
 		virtual void   step(CRGB* leds) = 0;

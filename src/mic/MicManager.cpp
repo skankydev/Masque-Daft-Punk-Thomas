@@ -13,11 +13,14 @@ MicManager* MicManager::getInstance() {
 	return instance;
 }
 
-MicManager::MicManager() : _volume(0.0f), _sensitivity(1.0f), _noiseFloor(0.08f) {
+MicManager::MicManager() : _volume(0.0f), _sensitivity(1.0f), _noiseFloor(0.08f),
+                            _beatLevel(0.0f), _centroid(0.5f),
+                            _bassHistIdx(0), _lastBeatMs(0) {
 	_mutex = xSemaphoreCreateMutex();
 	memset(_bands, 0, sizeof(_bands));
 	memset(_vReal,  0, sizeof(_vReal));
 	memset(_vImag,  0, sizeof(_vImag));
+	memset(_bassHist, 0, sizeof(_bassHist));
 	_computeBinRanges();
 	_initI2S();
 }
@@ -56,10 +59,12 @@ void MicManager::_initI2S() {
 }
 
 // ─── Mapping logarithmique fréquences → bins ─────────────────────────────────
-// 32 bandes de ~40 Hz à ~8000 Hz, échelle logarithmique
+// 32 bandes de ~100 Hz à ~8000 Hz, échelle logarithmique
+// freqLow remonté à 100Hz pour ignorer le bruit ambiant (ventilo, hum 50Hz,
+// vibrations) — en dessous de 100Hz il n'y a quasi pas de contenu musical utile
 
 void MicManager::_computeBinRanges() {
-	const float freqLow  = 40.0f;
+	const float freqLow  = 100.0f;
 	const float freqHigh = 8000.0f;
 	const float ratio    = freqHigh / freqLow;
 
@@ -140,19 +145,25 @@ void MicManager::_loop() {
 
 		float raw[MIC_N_BANDS];
 		for (int b = 0; b < MIC_N_BANDS; b++) {
-			float sum = 0.0f;
-			int   cnt = 0;
+			// On garde le pic spectral de la bande (préserve les écarts
+			// entre colonnes voisines, contrairement à la moyenne qui lisse)
+			float peak = 0.0f;
 			for (int k = _binStart[b]; k <= _binEnd[b]; k++) {
-				sum += _vReal[k];
-				cnt++;
+				if (_vReal[k] > peak) peak = _vReal[k];
 			}
-			float avg = (cnt > 0) ? sum / cnt : 0.0f;
 
-			// Sensibilité appliquée avant le log — impact maximal
-			avg *= sens;
+			// Pré-emphasis — atténue les basses (qui dominent naturellement)
+			// et booste les aigus, pour équilibrer la dynamique entre bandes
+			// b=0 → 0.4, b=31 → 2.0 (rampe linéaire)
+			float bandGain = 0.4f + 1.6f * ((float)b / (MIC_N_BANDS - 1));
 
-			// Log scale
-			raw[b] = log10f(1.0f + avg * 200.0f) / 3.5f;
+			// Sensibilité utilisateur + pré-emphasis
+			peak *= sens * bandGain;
+
+			// Compression par puissance — adoucit moins que log10 donc
+			// garde plus d'écart entre signaux moyens et forts
+			// gain ↑ = barres plus hautes, curve ↓ = écart plus marqué
+			raw[b] = powf(peak * 2.0f, 0.6f);
 			raw[b] = constrain(raw[b], 0.0f, 1.0f);
 
 			// Noise gate : coupe sous le seuil, rescale le reste sur [0, 1]
@@ -163,14 +174,56 @@ void MicManager::_loop() {
 			}
 		}
 
+		// ── Beat detection (energy-based) ─────────────────────────────────────
+		// Énergie basses instantanée — max des 4 premières bandes (raw, pas lissé)
+		float bassEnergy = 0.0f;
+		for (int i = 0; i < 4; i++) {
+			if (raw[i] > bassEnergy) bassEnergy = raw[i];
+		}
+
+		// Moyenne historique sur ~1s
+		float histAvg = 0.0f;
+		for (int i = 0; i < MIC_BEAT_HIST; i++) histAvg += _bassHist[i];
+		histAvg /= MIC_BEAT_HIST;
+
+		// Insère la valeur courante dans l'historique
+		_bassHist[_bassHistIdx] = bassEnergy;
+		_bassHistIdx = (_bassHistIdx + 1) % MIC_BEAT_HIST;
+
+		// Détection : énergie > seuil × moyenne, et hors cooldown
+		uint32_t now = millis();
+		float newBeatLevel = _beatLevel * MIC_BEAT_DECAY;  // décroissance par défaut
+		if (bassEnergy > histAvg * MIC_BEAT_THRESHOLD
+		    && histAvg > 0.05f                  // évite faux positifs sur silence
+		    && (now - _lastBeatMs) > MIC_BEAT_COOLDOWN) {
+			newBeatLevel = 1.0f;
+			_lastBeatMs = now;
+		}
+
+		// ── Centroid spectral ─────────────────────────────────────────────────
+		// "Fréquence moyenne" pondérée par les amplitudes des bandes.
+		// Pondère par l'index de bande (qui est déjà log-spaced) → 0 (basses) → 1 (aigus)
+		float weightedSum = 0.0f;
+		float totalAmp    = 0.0f;
+		for (int b = 0; b < MIC_N_BANDS; b++) {
+			weightedSum += b * raw[b];
+			totalAmp    += raw[b];
+		}
+		float newCentroid = (totalAmp > 0.05f)
+			? (weightedSum / totalAmp) / (float)(MIC_N_BANDS - 1)
+			: _centroid;  // garde la dernière valeur sur silence
+
 		// ── Mise à jour partagée (lissage temporel) ───────────────────────────
 		xSemaphoreTake(_mutex, portMAX_DELAY);
 
-		_volume = _volume * 0.6f + vol * 0.4f;
+		_volume    = _volume * 0.6f + vol * 0.4f;
+		_beatLevel = newBeatLevel;
+		// Lissage du centroid — la couleur change avec un peu d'inertie
+		_centroid  = _centroid * 0.7f + newCentroid * 0.3f;
 
 		for (int b = 0; b < MIC_N_BANDS; b++) {
-			// Montée rapide, descente lente
-			float alpha = (raw[b] > _bands[b]) ? 0.5f : 0.15f;
+			// Montée rapide, descente lente — descente accélérée pour plus de "snap"
+			float alpha = (raw[b] > _bands[b]) ? 0.5f : 0.3f;
 			_bands[b] = _bands[b] * (1.0f - alpha) + raw[b] * alpha;
 		}
 
@@ -220,4 +273,18 @@ float MicManager::getTreble() {
 	for (int i = MIC_N_BANDS - 4; i < MIC_N_BANDS; i++) sum += _bands[i];
 	xSemaphoreGive(_mutex);
 	return sum / 4.0f;
+}
+
+float MicManager::getBeatLevel() {
+	xSemaphoreTake(_mutex, portMAX_DELAY);
+	float v = _beatLevel;
+	xSemaphoreGive(_mutex);
+	return v;
+}
+
+float MicManager::getSpectralCentroid() {
+	xSemaphoreTake(_mutex, portMAX_DELAY);
+	float v = _centroid;
+	xSemaphoreGive(_mutex);
+	return v;
 }
