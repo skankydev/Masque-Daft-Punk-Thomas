@@ -1,5 +1,5 @@
 
-# Matrix LED — Masque Daft Punk
+# Masque Daft Punk Thomas
 
 Contrôleur de matrice LED WS2812B pour masque style Thomas Bangalter (Daft Punk).  
 Piloté via une app mobile Bluetooth BLE. Micro INMP441 pour les effets audio-réactifs.
