@@ -9,6 +9,8 @@
 #include <SPI.h>
 #include "function.h"
 
+#define VERSION  "1.00"
+
 #define MATRIX_W  32
 #define MATRIX_H   8
 #define NUM_LEDS  (MATRIX_W * MATRIX_H)
