@@ -175,11 +175,16 @@ void MicManager::_loop() {
 		}
 
 		// ── Beat detection (energy-based) ─────────────────────────────────────
-		// Énergie basses instantanée — max des 4 premières bandes (raw, pas lissé)
+		// Énergie de détection — directement sur les bins FFT bruts 40-300Hz,
+		// indépendant du mapping en bandes qui démarre à 100Hz pour l'affichage.
+		// → couvre sub-bass (kicks électro), kicks rock, médiums-bas (snares, congas latinos)
+		// bin width = SAMPLE_RATE / FFT_SAMPLES = 22050/512 = 43Hz
+		// → bin 1 ≈ 43Hz, bin 7 ≈ 300Hz
 		float bassEnergy = 0.0f;
-		for (int i = 0; i < 4; i++) {
-			if (raw[i] > bassEnergy) bassEnergy = raw[i];
+		for (int k = 1; k <= 7; k++) {
+			if (_vReal[k] > bassEnergy) bassEnergy = _vReal[k];
 		}
+		bassEnergy *= sens;  // respecte la sensibilité utilisateur
 
 		// Moyenne historique sur ~1s
 		float histAvg = 0.0f;
@@ -194,7 +199,7 @@ void MicManager::_loop() {
 		uint32_t now = millis();
 		float newBeatLevel = _beatLevel * MIC_BEAT_DECAY;  // décroissance par défaut
 		if (bassEnergy > histAvg * MIC_BEAT_THRESHOLD
-		    && histAvg > 0.05f                  // évite faux positifs sur silence
+		    && histAvg > 0.3f                   // évite faux positifs sur silence (valeur brute FFT)
 		    && (now - _lastBeatMs) > MIC_BEAT_COOLDOWN) {
 			newBeatLevel = 1.0f;
 			_lastBeatMs = now;

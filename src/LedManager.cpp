@@ -19,6 +19,7 @@
 #include "effects/EffetAudio3.h"
 #include "effects/EffetAudio4.h"
 #include "effects/EffetAudioWaterfall.h"
+#include "effects/EffetAudioParticles.h"
 
 // ─── Registre des effets ─────────────────────────────────────────────────────
 // Pour ajouter un effet : une ligne ici, rien d'autre à toucher.
@@ -54,6 +55,7 @@ static const EffetEntry EFFETS[] = {
 	{ "Audio3",     []() -> Effect* { return new EffetAudio3();    }, 30,  "#00C8FF",  nullptr   },
 	{ "Audio4",     []() -> Effect* { return new EffetAudio4();    }, 30,  nullptr,    nullptr   },
 	{ "Waterfall",  []() -> Effect* { return new EffetAudioWaterfall(); }, 60, "#00C8FF", nullptr  },
+	{ "Particles",  []() -> Effect* { return new EffetAudioParticles(); }, 30, "#FF5000", nullptr  },
 };
 
 static const uint8_t NB_EFFETS = sizeof(EFFETS) / sizeof(EFFETS[0]);

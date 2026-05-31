@@ -1,11 +1,16 @@
 #pragma once
 #include "Effect.h"
+#include "../mic/MicManager.h"
+
+// ─── Feu d'artifice audio-réactif ────────────────────────────────────────────
+// Une explosion à chaque beat, position aléatoire dans la matrice, couleur qui
+// suit la dominante spectrale (audioColor). Gravité douce + trainée pour
+// l'esthétique pyrotechnique classique.
 
 class EffetFireworks : public Effect {
 
 		static const uint8_t MAX_PARTICULES = 40;
 		static const uint8_t PAR_EXPLOSION  = 8;  // particules par explosion
-		static const uint8_t MAX_EXPLOSIONS = 3;  // explosions simultanées max
 
 		struct Particule {
 			float   x, y;
@@ -16,21 +21,12 @@ class EffetFireworks : public Effect {
 		};
 
 		Particule _pool[MAX_PARTICULES];
+		bool      _beatArmed;
 
-		// Palette festive pour les explosions
-		static const CRGB PALETTE[];
-		static const uint8_t NB_COULEURS = 8;
-
-		// Buffer de persistance (trainée légère)
-		uint8_t _buffer[MATRIX_W][MATRIX_H];
-
-		uint8_t _explosionCount; // explosions actives
-
-		void _newExplosion() {
+		void _newExplosion(CRGB col) {
 			// Centre aléatoire (évite les bords d'1px)
 			float cx = random(1, MATRIX_W - 1);
 			float cy = random(1, MATRIX_H - 1);
-			CRGB  col = PALETTE[random(NB_COULEURS)];
 
 			uint8_t spawned = 0;
 			for (uint8_t i = 0; i < MAX_PARTICULES && spawned < PAR_EXPLOSION; i++) {
@@ -39,7 +35,7 @@ class EffetFireworks : public Effect {
 				// Angle réparti uniformément + légère variation
 				float angle = (TWO_PI / PAR_EXPLOSION) * spawned
 							+ random(-10, 10) / 100.0f;
-				float speed = random(4, 10) / 10.0f; // vitesse modérée pour la taille de la matrice
+				float speed = random(4, 10) / 10.0f;
 
 				_pool[i].x          = cx;
 				_pool[i].y          = cy;
@@ -58,36 +54,32 @@ class EffetFireworks : public Effect {
 		}
 
 		void reset() override {
-			memset(_pool,   0, sizeof(_pool));
-			memset(_buffer, 0, sizeof(_buffer));
-			_explosionCount = 0;
-
-			// Première explosion dès le départ
-			_newExplosion();
+			memset(_pool, 0, sizeof(_pool));
+			_beatArmed = true;
 		}
 
+		String name() override { return "Fireworks"; }
+
 		void step(CRGB* leds) override {
-			// Fade du buffer de persistance
-			for (uint8_t x = 0; x < MATRIX_W; x++) {
-				for (uint8_t y = 0; y < MATRIX_H; y++) {
-					if (_buffer[x][y] > 30) {
-						_buffer[x][y] = _buffer[x][y] * 5 / 8;
-					} else {
-						_buffer[x][y] = 0;
-					}
-				}
+			MicManager* mic = MicManager::getInstance();
+
+			// ── Trigger : un beat = une nouvelle explosion ─────────────────────
+			float beat = mic->getBeatLevel();
+			if (beat > 0.7f && _beatArmed) {
+				_newExplosion(audioColor(mic->getSpectralCentroid()));
+				_beatArmed = false;
+			} else if (beat < 0.4f) {
+				_beatArmed = true;
 			}
 
-			// Mise à jour des particules
-			uint8_t actives = 0;
+			// ── Mise à jour des particules ─────────────────────────────────────
 			for (uint8_t i = 0; i < MAX_PARTICULES; i++) {
 				if (!_pool[i].active) continue;
-				actives++;
 
-				// Déplacement + légère gravité
+				// Déplacement + gravité
 				_pool[i].x  += _pool[i].vx;
 				_pool[i].y  += _pool[i].vy;
-				_pool[i].vy += 0.08f; // gravité douce
+				_pool[i].vy += 0.08f;
 
 				// Fade
 				if (_pool[i].brightness > 20) {
@@ -102,23 +94,11 @@ class EffetFireworks : public Effect {
 				int8_t py = (int8_t)_pool[i].y;
 				if (px < 0 || px >= MATRIX_W || py < 0 || py >= MATRIX_H) {
 					_pool[i].active = false;
-					continue;
-				}
-
-				// Écriture dans le buffer (garde le max)
-				if (_pool[i].brightness > _buffer[px][py]) {
-					_buffer[px][py] = _pool[i].brightness;
-					// Associer la couleur au pixel via les leds directement
 				}
 			}
 
-			// Nouvelle explosion si besoin
-			if (actives == 0 || (actives < PAR_EXPLOSION * MAX_EXPLOSIONS && random(10) < 3)) {
-				_newExplosion();
-			}
-
-			// Rendu : fond noir + particules
-			fill_solid(leds, NUM_LEDS, CRGB::Black);
+			// ── Rendu : fade léger pour traînée + particules en additif ────────
+			fadeToBlackBy(leds, NUM_LEDS, 60);
 
 			for (uint8_t i = 0; i < MAX_PARTICULES; i++) {
 				if (!_pool[i].active) continue;
@@ -126,47 +106,30 @@ class EffetFireworks : public Effect {
 				int8_t py = (int8_t)_pool[i].y;
 				if (px < 0 || px >= MATRIX_W || py < 0 || py >= MATRIX_H) continue;
 
-				// Couleur scalée par brightness
 				CRGB c = _pool[i].color;
 				c.nscale8(_pool[i].brightness);
-
-				// Additionner (plusieurs particules peuvent se superposer)
 				leds[XY(px, py)] += c;
 			}
 		}
 
 		void stepStripsTop(CRGB* strip, uint8_t len) override {
-			// Flashs colorés — chaque LED clignote indépendamment
-			uint32_t t = millis();
-			for (uint8_t i = 0; i < len; i++) {
-				uint8_t phase = (t / 80 + i * 41) % 200;
-				if (phase < 30) {
-					strip[i] = PALETTE[(t / 400 + i) % NB_COULEURS];
-					strip[i].nscale8(255 - phase * 7);
-				} else {
-					strip[i] = CRGB::Black;
-				}
-			}
+			MicManager* mic = MicManager::getInstance();
+			// Pulse beat couleur réactive
+			float beat = mic->getBeatLevel();
+			CRGB c = audioColor(mic->getSpectralCentroid());
+			c.nscale8((uint8_t)(beat * 255));
+			for (uint8_t i = 0; i < len; i++) strip[i] = c;
 		}
 
 		void stepStripsBot(CRGB* strip, uint8_t len) override {
-			// Blocs fixes festifs — une couleur de palette par LED
-			for (uint8_t i = 0; i < len; i++) {
-				strip[i] = PALETTE[i % NB_COULEURS];
-				strip[i].nscale8(80);
-			}
+			MicManager* mic = MicManager::getInstance();
+			// VU couleur réactive
+			float avg = 0;
+			for (uint8_t i = 0; i < MATRIX_W; i++) avg += mic->getBand(i);
+			avg /= MATRIX_W;
+			uint8_t filled = (uint8_t)(avg * len);
+			CRGB color = audioColor(mic->getSpectralCentroid());
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = (i < filled) ? color : CRGB::Black;
 		}
-
-		String name() override { return "Fireworks"; }
-};
-
-const CRGB EffetFireworks::PALETTE[] = {
-	CRGB(255,  80,   0), // orange
-	CRGB(255,   0,  80), // rose
-	CRGB(  0, 200, 255), // cyan
-	CRGB(255, 220,   0), // jaune
-	CRGB(  0, 255, 100), // vert
-	CRGB(180,   0, 255), // violet
-	CRGB(255,  30,  30), // rouge
-	CRGB(255, 255, 255), // blanc
 };
