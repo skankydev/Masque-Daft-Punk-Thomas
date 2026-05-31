@@ -2,15 +2,27 @@
 #include "Effect.h"
 
 class EffetRainbow : public Effect {
-public:
-    void step(CRGB* leds) override {
-        uint8_t t = millis() >> 4;
-        for (uint8_t y = 0; y < MATRIX_H; y++) {
-            for (uint8_t x = 0; x < MATRIX_W; x++) {
-                leds[XY(x, y)] = CHSV(t + x * 8 + y * 12, 255, 255);
-            }
-        }
-    }
+	public:
+		void step(CRGB* leds) override {
+			uint8_t t = millis() >> 4;
+			for (uint8_t y = 0; y < MATRIX_H; y++) {
+				for (uint8_t x = 0; x < MATRIX_W; x++) {
+					leds[XY(x, y)] = CHSV(t + x * 8 + y * 12, 255, 255);
+				}
+			}
+		}
 
-    String name() override { return "Rainbow"; }
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			uint8_t t = millis() >> 4;
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = CHSV(t + i * 8, 255, 255);
+		}
+
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			uint8_t t = millis() >> 4;
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = CHSV(t + i * 8, 255, 255);
+		}
+
+		String name() override { return "Rainbow"; }
 };

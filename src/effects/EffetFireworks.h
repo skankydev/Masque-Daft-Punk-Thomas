@@ -1,150 +1,135 @@
 #pragma once
 #include "Effect.h"
+#include "../mic/MicManager.h"
+
+// ─── Feu d'artifice audio-réactif ────────────────────────────────────────────
+// Une explosion à chaque beat, position aléatoire dans la matrice, couleur qui
+// suit la dominante spectrale (audioColor). Gravité douce + trainée pour
+// l'esthétique pyrotechnique classique.
 
 class EffetFireworks : public Effect {
 
-    static const uint8_t MAX_PARTICULES = 40;
-    static const uint8_t PAR_EXPLOSION  = 8;  // particules par explosion
-    static const uint8_t MAX_EXPLOSIONS = 3;  // explosions simultanées max
+		static const uint8_t MAX_PARTICULES = 40;
+		static const uint8_t PAR_EXPLOSION  = 8;  // particules par explosion
 
-    struct Particule {
-        float   x, y;
-        float   vx, vy;
-        uint8_t brightness;
-        CRGB    color;
-        bool    active;
-    };
+		struct Particule {
+			float   x, y;
+			float   vx, vy;
+			uint8_t brightness;
+			CRGB    color;
+			bool    active;
+		};
 
-    Particule _pool[MAX_PARTICULES];
+		Particule _pool[MAX_PARTICULES];
+		bool      _beatArmed;
 
-    // Palette festive pour les explosions
-    static const CRGB PALETTE[];
-    static const uint8_t NB_COULEURS = 8;
+		void _newExplosion(CRGB col) {
+			// Centre aléatoire (évite les bords d'1px)
+			float cx = random(1, MATRIX_W - 1);
+			float cy = random(1, MATRIX_H - 1);
 
-    // Buffer de persistance (trainée légère)
-    uint8_t _buffer[MATRIX_W][MATRIX_H];
+			uint8_t spawned = 0;
+			for (uint8_t i = 0; i < MAX_PARTICULES && spawned < PAR_EXPLOSION; i++) {
+				if (_pool[i].active) continue;
 
-    uint8_t _explosionCount; // explosions actives
+				// Angle réparti uniformément + légère variation
+				float angle = (TWO_PI / PAR_EXPLOSION) * spawned
+							+ random(-10, 10) / 100.0f;
+				float speed = random(4, 10) / 10.0f;
 
-    void _newExplosion() {
-        // Centre aléatoire (évite les bords d'1px)
-        float cx = random(1, MATRIX_W - 1);
-        float cy = random(1, MATRIX_H - 1);
-        CRGB  col = PALETTE[random(NB_COULEURS)];
+				_pool[i].x          = cx;
+				_pool[i].y          = cy;
+				_pool[i].vx         = cosf(angle) * speed;
+				_pool[i].vy         = sinf(angle) * speed;
+				_pool[i].brightness = 255;
+				_pool[i].color      = col;
+				_pool[i].active     = true;
+				spawned++;
+			}
+		}
 
-        uint8_t spawned = 0;
-        for (uint8_t i = 0; i < MAX_PARTICULES && spawned < PAR_EXPLOSION; i++) {
-            if (_pool[i].active) continue;
+	public:
+		EffetFireworks() {
+			reset();
+		}
 
-            // Angle réparti uniformément + légère variation
-            float angle = (TWO_PI / PAR_EXPLOSION) * spawned
-                        + random(-10, 10) / 100.0f;
-            float speed = random(4, 10) / 10.0f; // vitesse modérée pour la taille de la matrice
+		void reset() override {
+			memset(_pool, 0, sizeof(_pool));
+			_beatArmed = true;
+		}
 
-            _pool[i].x          = cx;
-            _pool[i].y          = cy;
-            _pool[i].vx         = cosf(angle) * speed;
-            _pool[i].vy         = sinf(angle) * speed;
-            _pool[i].brightness = 255;
-            _pool[i].color      = col;
-            _pool[i].active     = true;
-            spawned++;
-        }
-    }
+		String name() override { return "Fireworks"; }
 
-public:
-    EffetFireworks() {
-        reset();
-    }
+		void step(CRGB* leds) override {
+			MicManager* mic = MicManager::getInstance();
 
-    void reset() override {
-        memset(_pool,   0, sizeof(_pool));
-        memset(_buffer, 0, sizeof(_buffer));
-        _explosionCount = 0;
+			// ── Trigger : un beat = une nouvelle explosion ─────────────────────
+			float beat = mic->getBeatLevel();
+			if (beat > 0.7f && _beatArmed) {
+				_newExplosion(audioColor(mic->getSpectralCentroid()));
+				_beatArmed = false;
+			} else if (beat < 0.4f) {
+				_beatArmed = true;
+			}
 
-        // Première explosion dès le départ
-        _newExplosion();
-    }
+			// ── Mise à jour des particules ─────────────────────────────────────
+			for (uint8_t i = 0; i < MAX_PARTICULES; i++) {
+				if (!_pool[i].active) continue;
 
-    void step(CRGB* leds) override {
-        // Fade du buffer de persistance
-        for (uint8_t x = 0; x < MATRIX_W; x++) {
-            for (uint8_t y = 0; y < MATRIX_H; y++) {
-                if (_buffer[x][y] > 30) {
-                    _buffer[x][y] = _buffer[x][y] * 5 / 8;
-                } else {
-                    _buffer[x][y] = 0;
-                }
-            }
-        }
+				// Déplacement + gravité
+				_pool[i].x  += _pool[i].vx;
+				_pool[i].y  += _pool[i].vy;
+				_pool[i].vy += 0.08f;
 
-        // Mise à jour des particules
-        uint8_t actives = 0;
-        for (uint8_t i = 0; i < MAX_PARTICULES; i++) {
-            if (!_pool[i].active) continue;
-            actives++;
+				// Fade
+				if (_pool[i].brightness > 20) {
+					_pool[i].brightness = _pool[i].brightness * 6 / 8;
+				} else {
+					_pool[i].active = false;
+					continue;
+				}
 
-            // Déplacement + légère gravité
-            _pool[i].x  += _pool[i].vx;
-            _pool[i].y  += _pool[i].vy;
-            _pool[i].vy += 0.08f; // gravité douce
+				// Hors matrice → mort
+				int8_t px = (int8_t)_pool[i].x;
+				int8_t py = (int8_t)_pool[i].y;
+				if (px < 0 || px >= MATRIX_W || py < 0 || py >= MATRIX_H) {
+					_pool[i].active = false;
+				}
+			}
 
-            // Fade
-            if (_pool[i].brightness > 20) {
-                _pool[i].brightness = _pool[i].brightness * 6 / 8;
-            } else {
-                _pool[i].active = false;
-                continue;
-            }
+			// ── Rendu : fade léger pour traînée + particules en additif ────────
+			fadeToBlackBy(leds, NUM_LEDS, 60);
 
-            // Hors matrice → mort
-            int8_t px = (int8_t)_pool[i].x;
-            int8_t py = (int8_t)_pool[i].y;
-            if (px < 0 || px >= MATRIX_W || py < 0 || py >= MATRIX_H) {
-                _pool[i].active = false;
-                continue;
-            }
+			for (uint8_t i = 0; i < MAX_PARTICULES; i++) {
+				if (!_pool[i].active) continue;
+				int8_t px = (int8_t)_pool[i].x;
+				int8_t py = (int8_t)_pool[i].y;
+				if (px < 0 || px >= MATRIX_W || py < 0 || py >= MATRIX_H) continue;
 
-            // Écriture dans le buffer (garde le max)
-            if (_pool[i].brightness > _buffer[px][py]) {
-                _buffer[px][py] = _pool[i].brightness;
-                // Associer la couleur au pixel via les leds directement
-            }
-        }
+				CRGB c = _pool[i].color;
+				c.nscale8(_pool[i].brightness);
+				leds[XY(px, py)] += c;
+			}
+		}
 
-        // Nouvelle explosion si besoin
-        if (actives == 0 || (actives < PAR_EXPLOSION * MAX_EXPLOSIONS && random(10) < 3)) {
-            _newExplosion();
-        }
+		void stepStripsTop(CRGB* strip, uint8_t len) override {
+			MicManager* mic = MicManager::getInstance();
+			// Pulse beat couleur réactive
+			float beat = mic->getBeatLevel();
+			CRGB c = audioColor(mic->getSpectralCentroid());
+			c.nscale8((uint8_t)(beat * 255));
+			for (uint8_t i = 0; i < len; i++) strip[i] = c;
+		}
 
-        // Rendu : fond noir + particules
-        fill_solid(leds, NUM_LEDS, CRGB::Black);
-
-        for (uint8_t i = 0; i < MAX_PARTICULES; i++) {
-            if (!_pool[i].active) continue;
-            int8_t px = (int8_t)_pool[i].x;
-            int8_t py = (int8_t)_pool[i].y;
-            if (px < 0 || px >= MATRIX_W || py < 0 || py >= MATRIX_H) continue;
-
-            // Couleur scalée par brightness
-            CRGB c = _pool[i].color;
-            c.nscale8(_pool[i].brightness);
-
-            // Additionner (plusieurs particules peuvent se superposer)
-            leds[XY(px, py)] += c;
-        }
-    }
-
-    String name() override { return "Fireworks"; }
-};
-
-const CRGB EffetFireworks::PALETTE[] = {
-    CRGB(255,  80,   0), // orange
-    CRGB(255,   0,  80), // rose
-    CRGB(  0, 200, 255), // cyan
-    CRGB(255, 220,   0), // jaune
-    CRGB(  0, 255, 100), // vert
-    CRGB(180,   0, 255), // violet
-    CRGB(255,  30,  30), // rouge
-    CRGB(255, 255, 255), // blanc
+		void stepStripsBot(CRGB* strip, uint8_t len) override {
+			MicManager* mic = MicManager::getInstance();
+			// VU couleur réactive
+			float avg = 0;
+			for (uint8_t i = 0; i < MATRIX_W; i++) avg += mic->getBand(i);
+			avg /= MATRIX_W;
+			uint8_t filled = (uint8_t)(avg * len);
+			CRGB color = audioColor(mic->getSpectralCentroid());
+			for (uint8_t i = 0; i < len; i++)
+				strip[i] = (i < filled) ? color : CRGB::Black;
+		}
 };

@@ -1,6 +1,7 @@
 #include "ble/MyBle.h"
 #include "Terminal.h"
 #include "LedManager.h"
+#include "mic/MicManager.h"
 
 
 class BleServerCallbacks : public BLEServerCallbacks
@@ -68,7 +69,7 @@ void MyBle::init(){
 	_service->start();
 	_advertising = _server->getAdvertising();
 	_advertising->start();
-	success("BLE init");
+	warning("BLE init","BLE");
 	_isInit = true;
 
 }
@@ -82,13 +83,13 @@ void MyBle::sendNotif(String message){
 }
 
 bool MyBle::setConnected(){
-	success("Coucou connect");
+	success("Coucou connect","BLE");
 	_isConnected = true;
 	return _isConnected;
 }
 
 bool MyBle::setDisconnected(){
-	warning("Bye bye connect");
+	warning("Bye bye connect","BLE");
 	_isConnected = false;
 	_server->getAdvertising()->start();
 	return _isConnected;
@@ -169,8 +170,15 @@ void MyBle::doAction(){
 	} else if (cmd == "setColor") {
 		uint32_t hex = strtol(param.c_str(), NULL, 16);
 		leds->setColor(CRGB((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF));
+	} else if (cmd == "setSens") {
+		float s = param.toFloat();
+		MicManager::getInstance()->setSensitivity(s);
+	} else if (cmd == "setRandom") {
+		// Param en SECONDES (0 = OFF, 1-30 = délai du random)
+		uint32_t sec = (uint32_t)param.toInt();
+		leds->setAutoDelay(sec * 1000);
 	} else {
-		warning("BLE commande inconnue : " + cmd);
+		warning("BLE commande inconnue : " + cmd,"BLE");
 	}
 
 }
