@@ -124,6 +124,25 @@ void LedManager::setNextEffect() {
 	setEffect((_effectIndex + 1) % NB_EFFETS);
 }
 
+// Pick un effet random différent du courant + couleur HSV random si supporté
+void LedManager::setRandomEffect() {
+	if (NB_EFFETS <= 1) return;
+
+	uint8_t newIdx;
+	do {
+		newIdx = random(NB_EFFETS);
+	} while (newIdx == _effectIndex);
+
+	_setEffectByIndex(newIdx);
+
+	// Si l'effet supporte une couleur, en tirer une au pif (HSV vif)
+	if (EFFETS[newIdx].defaultColor != nullptr) {
+		_current->setColor(CHSV(random8(), 255, 255));
+	}
+
+	println(violet("Random") + " : " + jaune(_current->name()));
+}
+
 uint8_t LedManager::getEffectIndex() {
 	return _effectIndex;
 }
@@ -172,7 +191,7 @@ void LedManager::step() {
 	unsigned long now = millis();
 
 	if (_autoMode && (now - _lastChange > _autoDelay)) {
-		setNextEffect();
+		setRandomEffect();
 		_lastChange = now;
 	}
 
@@ -236,9 +255,17 @@ bool LedManager::getAutoMode() {
 	return _autoMode;
 }
 
+// Délai en ms. 0 = désactive le mode auto, > 0 = active et règle le délai
 void LedManager::setAutoDelay(uint32_t delayMs) {
 	_autoDelay = delayMs;
-	Serial.println(bleu("Auto delay") + " : " + String(delayMs) + "ms");
+	if (delayMs == 0) {
+		_autoMode = false;
+		warning("Auto mode désactivé");
+	} else {
+		_autoMode   = true;
+		_lastChange = millis();
+		success("Auto mode actif — délai : " + String(delayMs) + "ms");
+	}
 }
 
 // ─── Debug ───────────────────────────────────────────────────────────────────

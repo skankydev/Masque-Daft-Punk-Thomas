@@ -173,6 +173,10 @@ void MyBle::doAction(){
 	} else if (cmd == "setSens") {
 		float s = param.toFloat();
 		MicManager::getInstance()->setSensitivity(s);
+	} else if (cmd == "setRandom") {
+		// Param en SECONDES (0 = OFF, 1-30 = délai du random)
+		uint32_t sec = (uint32_t)param.toInt();
+		leds->setAutoDelay(sec * 1000);
 	} else {
 		warning("BLE commande inconnue : " + cmd,"BLE");
 	}

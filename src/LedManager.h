@@ -42,6 +42,7 @@ class LedManager {
 		uint32_t getSpeed();
 
 		void    setNextEffect();
+		void    setRandomEffect();
 		void    setEffect(uint8_t index);
 		uint8_t getEffectIndex();
 		String  getEffectName();
