@@ -1,2 +1,4 @@
 .pio
 .claude
+*.sublime-workspace
+prj.sublime-workspace
