@@ -1,3 +1,4 @@
+
 # Matrix LED — Masque Daft Punk
 
 Contrôleur de matrice LED WS2812B pour masque style Thomas Bangalter (Daft Punk).  
@@ -47,61 +48,12 @@ Chaque effet peut overrider `stepStripsTop()` et `stepStripsBot()` pour les anim
 
 Sample rate 22050 Hz, FFT 512 samples → 32 bandes log de 100 Hz à 8 kHz.
 
-### Schéma de câblage
+### Alimentation
 
-```mermaid
-graph LR
-    ESP[ESP32-S3-N16R8]
-
-    ESP -->|GPIO 15| MATRIX[Matrice 32x8<br/>WS2812B<br/>256 LEDs]
-
-    ESP -->|GPIO 11| SRT[Strip oreille droite<br/>10 LEDs]
-    ESP -->|GPIO 12| SRB[Strip basse droite<br/>10 LEDs]
-    ESP -->|GPIO 17| SLT[Strip oreille gauche<br/>10 LEDs]
-    ESP -->|GPIO 18| SLB[Strip basse gauche<br/>10 LEDs]
-
-    ESP -->|GPIO 41 SCK| MIC[INMP441<br/>micro I2S]
-    ESP -->|GPIO 42 WS| MIC
-    ESP -->|GPIO 2 SD| MIC
-
-    PSU[5V externe<br/>~10A] --> MATRIX
-    PSU --> SRT
-    PSU --> SRB
-    PSU --> SLT
-    PSU --> SLB
-    PSU --> ESP
-```
-
-<details>
-<summary>Version ASCII (lisible hors GitHub)</summary>
-
-```
-                    ┌─────────────────────────┐
-                    │      ESP32-S3-N16R8     │
-                    │                         │
-   Matrice 32×8 ◄───┤ GPIO 15      GPIO 2 ├───► INMP441 SD
-   (256 LEDs)       │              GPIO 41├───► INMP441 SCK
-                    │              GPIO 42├───► INMP441 WS
-   Strip droite ◄───┤ GPIO 11                │
-   "oreille"        │                        │
-                    │                        │
-   Strip droite ◄───┤ GPIO 12                │
-   "basse"          │                        │
-                    │                        │
-   Strip gauche ◄───┤ GPIO 17                │
-   "oreille"        │                        │
-                    │                        │
-   Strip gauche ◄───┤ GPIO 18                │
-   "basse"          │                        │
-                    └─────────────────────────┘
-                              │ │
-                              │ └── GND commun à tous les composants
-                              └──── 5V (alim externe recommandée)
-```
-
-</details>
-
-> ⚠️ **Alimentation** : à pleine puissance les 296 LEDs peuvent tirer jusqu'à ~18A pic théorique (60mA × 296). En usage musical à brightness modérée (10/255 par défaut), on reste sous 3A. Prévoir une alim 5V externe suffisante et un GND commun avec l'ESP32.
+Deux alimentations séparées :
+- **ESP32** : USB ou 5V via Vin
+- **LEDs** : alim 5V externe dédiée . GND commun avec l'ESP32 obligatoire.
+--  ⚠️  à pleine puissance les 296 LEDs peuvent tirer jusqu'à ~18A pic théorique (60mA × 296). En usage musical à brightness modérée (10/255 par défaut), on reste sous 3A. Prévoir une alim 5V externe suffisante.
 
 ---
 
